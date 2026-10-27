@@ -159,6 +159,23 @@ function AppContent() {
         onOpenCommandPalette={() => setCommandPaletteOpen(true)}
       />
 
+      {/* Cloud Backend Warning Banner if running on Vercel and backend is disconnected */}
+      {healthStatus?.status !== 'healthy' && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-950 px-4 py-2 text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">⚠️ Cloud Backend Not Connected:</span>
+            <span>Your frontend is running on Vercel, but no backend is linked yet.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 rounded-md font-bold text-amber-900 cursor-pointer transition-colors shrink-0 ml-3"
+          >
+            Connect Render in Settings →
+          </button>
+        </div>
+      )}
+
       {/* Main Studio Workspace */}
       <div className="flex-1 flex overflow-hidden">
         {/* Navigation Sidebar (Desktop) + Mobile Bottom Tab Bar */}

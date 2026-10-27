@@ -30,6 +30,16 @@ async function request(endpoint, options = {}) {
   }
 
   if (!res.ok) {
+    if (res.status === 405) {
+      throw new Error(
+        "Backend not connected (405 Method Not Allowed). Vercel is hosting the frontend without a connected backend. Please go to the Settings tab and enter your Render backend URL."
+      );
+    }
+    if (res.status === 404) {
+      throw new Error(
+        `API endpoint not found (404) at ${url}. Ensure your backend server is running and configured in Settings.`
+      );
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || `Request failed with status ${res.status}`);
   }
