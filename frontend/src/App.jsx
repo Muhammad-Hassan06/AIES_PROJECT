@@ -2,11 +2,20 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import StartupAnimation from './components/StartupAnimation';
+import CommandPaletteModal from './components/CommandPaletteModal';
+
+// Pages
 import InvestigationStudioPage from './pages/InvestigationStudioPage';
 import CasesPage from './pages/CasesPage';
-import InsightsPage from './pages/InsightsPage';
+import AgentConsolePage from './pages/AgentConsolePage';
+import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import ThreatTrendsPage from './pages/ThreatTrendsPage';
+import ModelsDataPage from './pages/ModelsDataPage';
+import AwarenessAcademyPage from './pages/AwarenessAcademyPage';
+import BatchComparePage from './pages/BatchComparePage';
 import SafetyCenterPage from './pages/SafetyCenterPage';
 import SettingsPage from './pages/SettingsPage';
+
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import { getInvestigation, listInvestigations, getHealthStatus } from './services/api';
@@ -15,33 +24,113 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('investigate');
   const [currentReport, setCurrentReport] = useState(null);
   const [healthStatus, setHealthStatus] = useState(null);
+  const [recentCases, setRecentCases] = useState([]);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
+  // Check URL deep-linking on mount and history state
   useEffect(() => {
-    async function init() {
+    async function handleDeepLink() {
       try {
+        const path = window.location.pathname;
+        const search = window.location.search;
+        let targetCaseId = null;
+
+        // Path-based deep link: /cases/CS-XXXX
+        const match = path.match(/\/cases\/([A-Za-z0-9_-]+)/);
+        if (match && match[1]) {
+          targetCaseId = match[1];
+        } else {
+          // Query-based fallback: ?case=CS-XXXX
+          const params = new URLSearchParams(search);
+          if (params.get('case')) {
+            targetCaseId = params.get('case');
+          }
+        }
+
         const [h, cases] = await Promise.all([
           getHealthStatus().catch(() => null),
-          listInvestigations(1).catch(() => [])
+          listInvestigations(50).catch(() => [])
         ]);
         setHealthStatus(h);
+        setRecentCases(cases);
+
+        if (targetCaseId) {
+          const loadedCase = await getInvestigation(targetCaseId).catch(() => null);
+          if (loadedCase) {
+            setCurrentReport(loadedCase);
+            setActiveTab('investigate');
+            return;
+          }
+        }
+
+        // If no deep link, load most recent case if available
         if (cases && cases.length > 0) {
           const latestCase = await getInvestigation(cases[0].case_id).catch(() => null);
           if (latestCase) setCurrentReport(latestCase);
         }
       } catch (e) {
-        console.error('Initialization error', e);
+        console.error('Initialization / deep-link error', e);
       }
     }
-    init();
+
+    handleDeepLink();
+
+    // Listen to popstate (browser back/forward buttons)
+    const onPopState = () => {
+      const match = window.location.pathname.match(/\/cases\/([A-Za-z0-9_-]+)/);
+      if (match && match[1]) {
+        getInvestigation(match[1]).then(rep => {
+          if (rep) {
+            setCurrentReport(rep);
+            setActiveTab('investigate');
+          }
+        });
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleOpenCase = (report) => {
     setCurrentReport(report);
     setActiveTab('investigate');
+    // Deep-link update without page reload
+    if (report?.case_id) {
+      window.history.pushState(null, '', `/cases/${report.case_id}`);
+    }
+  };
+
+  const handleOpenCaseById = async (caseId) => {
+    try {
+      const rep = await getInvestigation(caseId);
+      if (rep) {
+        handleOpenCase(rep);
+      }
+    } catch (e) {
+      console.error('Failed to open case by ID', e);
+    }
   };
 
   const handleNewInvestigation = () => {
     setActiveTab('investigate');
+    window.history.pushState(null, '', '/');
+  };
+
+  const handleRunScenario = (scenario) => {
+    setActiveTab('investigate');
+    // The studio will catch scenario selection or we can pass it
   };
 
   return (
@@ -49,11 +138,25 @@ function AppContent() {
       {/* 1.5s Skippable Startup Animation */}
       <StartupAnimation />
 
-      {/* Top Application Bar with Language Selector */}
+      {/* Command Palette Modal (Ctrl+K) */}
+      <CommandPaletteModal
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onNavigateTab={(tabId) => {
+          setActiveTab(tabId);
+          setCommandPaletteOpen(false);
+        }}
+        onRunScenario={handleRunScenario}
+        cases={recentCases}
+        onOpenCaseById={handleOpenCaseById}
+      />
+
+      {/* Top Application Bar with Language Selector & Command Palette Trigger */}
       <Navbar
         currentCaseId={currentReport?.case_id}
         onNewInvestigation={handleNewInvestigation}
         healthStatus={healthStatus}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
       />
 
       {/* Main Studio Workspace */}
@@ -70,7 +173,12 @@ function AppContent() {
             {activeTab === 'investigate' && (
               <InvestigationStudioPage
                 currentReport={currentReport}
-                onReportGenerated={(rep) => setCurrentReport(rep)}
+                onReportGenerated={(rep) => {
+                  setCurrentReport(rep);
+                  if (rep?.case_id) {
+                    window.history.pushState(null, '', `/cases/${rep.case_id}`);
+                  }
+                }}
               />
             )}
 
@@ -80,8 +188,28 @@ function AppContent() {
               />
             )}
 
-            {activeTab === 'insights' && (
-              <InsightsPage />
+            {activeTab === 'agent' && (
+              <AgentConsolePage />
+            )}
+
+            {activeTab === 'rag' && (
+              <KnowledgeBasePage />
+            )}
+
+            {activeTab === 'trends' && (
+              <ThreatTrendsPage />
+            )}
+
+            {activeTab === 'models' && (
+              <ModelsDataPage />
+            )}
+
+            {activeTab === 'awareness' && (
+              <AwarenessAcademyPage />
+            )}
+
+            {activeTab === 'batch' && (
+              <BatchComparePage />
             )}
 
             {activeTab === 'safety' && (
@@ -97,6 +225,7 @@ function AppContent() {
     </div>
   );
 }
+
 
 export default function App() {
   return (

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Shield, PlusCircle, Globe, Check } from 'lucide-react';
+import { Shield, PlusCircle, Globe, Search, Command } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function Navbar({ currentCaseId, onNewInvestigation, healthStatus }) {
+export default function Navbar({ currentCaseId, onNewInvestigation, healthStatus, onOpenCommandPalette }) {
   const { language, setLanguage, t, isRtl } = useLanguage();
 
   const languages = [
@@ -14,7 +14,11 @@ export default function Navbar({ currentCaseId, onNewInvestigation, healthStatus
   return (
     <header className="h-16 border-b border-stone-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6">
       {/* Brand & Tagline */}
-      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+      <div 
+        onClick={onNewInvestigation}
+        className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer"
+        title="CyberShield AI Home"
+      >
         <div className="w-9 h-9 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-xs">
           <Shield className="w-5 h-5" />
         </div>
@@ -34,10 +38,24 @@ export default function Navbar({ currentCaseId, onNewInvestigation, healthStatus
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+      <div className="flex items-center space-x-2 sm:space-x-3 rtl:space-x-reverse">
+        {/* Command Palette Trigger */}
+        <button
+          type="button"
+          onClick={onOpenCommandPalette}
+          className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs text-slate-500 transition-colors cursor-pointer"
+          title="Open Command Palette (Ctrl+K)"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] hidden md:inline">Command Menu</span>
+          <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-stone-200 text-slate-500">
+            Ctrl+K
+          </kbd>
+        </button>
+
         {/* Active Case ID Pill */}
         {currentCaseId && (
-          <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-stone-50 border border-stone-200 text-xs">
+          <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-stone-50 border border-stone-200 text-xs">
             <span className="text-slate-500 font-medium">{t('active_case')}:</span>
             <span className="font-mono font-semibold text-teal-800">{currentCaseId}</span>
           </div>

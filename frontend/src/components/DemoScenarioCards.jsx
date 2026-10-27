@@ -77,6 +77,8 @@ export const SAMPLE_SCENARIOS = [
   }
 ];
 
+export const DEMO_SCENARIOS = SAMPLE_SCENARIOS;
+
 export default function DemoScenarioCards({ onSelectScenario }) {
   const getBadgeStyle = (type) => {
     switch (type) {

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, FileText, Image as ImageIcon, Mail, 
   Send, RefreshCw, Clipboard, AlertCircle, 
-  Layers, Scale, Cpu 
+  Layers, Scale, Cpu, FolderArchive, X, Sparkles
 } from 'lucide-react';
 import RiskVerdictCard from '../components/RiskVerdictCard';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -11,12 +11,14 @@ import EvidenceLedgerTable from '../components/EvidenceLedgerTable';
 import ActionPlanCard from '../components/ActionPlanCard';
 import ShareSafeSummaryModal from '../components/ShareSafeSummaryModal';
 import AgentStepper from '../components/AgentStepper';
+import AgentWorkflowGraph from '../components/AgentWorkflowGraph';
 import DemoScenarioCards from '../components/DemoScenarioCards';
 import { createInvestigation } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
+import { formatCaseDate } from '../utils/format';
 
-export default function InvestigationStudioPage({ currentReport, onReportGenerated }) {
+export default function InvestigationStudioPage({ currentReport, onReportGenerated, onClearReport }) {
   const { t } = useLanguage();
   const { addToast } = useToast();
 
@@ -33,6 +35,42 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
   const [isTechnicalMode, setIsTechnicalMode] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+  // Restore saved case inputs into state whenever currentReport changes
+  useEffect(() => {
+    if (currentReport) {
+      const raw = currentReport.raw_input || {};
+      const targetUrl = raw.url || currentReport.url_result?.url || '';
+      const targetText = raw.text || currentReport.nlp_result?.analyzed_text || '';
+      const targetSender = raw.sender_info || '';
+      const targetScreenshot = raw.screenshot_name || (currentReport.vision_result?.extracted_text ? 'screenshot.png' : '');
+      const targetIndicators = raw.manual_indicators || [];
+
+      setUrl(targetUrl);
+      setText(targetText);
+      setSenderInfo(targetSender);
+      setScreenshotName(targetScreenshot);
+      setManualIndicators(targetIndicators);
+
+      if (currentReport.input_type === 'url') setActiveTab('url');
+      else if (currentReport.input_type === 'message' || currentReport.input_type === 'email') setActiveTab('message');
+      else if (currentReport.input_type === 'screenshot') setActiveTab('screenshot');
+      else if (targetUrl) setActiveTab('url');
+      else if (targetText) setActiveTab('message');
+    }
+  }, [currentReport?.case_id]);
+
+  const handleCloseSavedCase = () => {
+    setUrl('');
+    setText('');
+    setSenderInfo('');
+    setScreenshotBase64('');
+    setScreenshotName('');
+    setManualIndicators([]);
+    setErrorMessage('');
+    if (onClearReport) onClearReport();
+    addToast('Cleared saved case view', 'info');
+  };
+
   const handleSelectScenario = (sc) => {
     setUrl(sc.url || '');
     setText(sc.text || '');
@@ -44,7 +82,7 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
 
     if (sc.type === 'url') setActiveTab('url');
     else if (sc.type === 'message') setActiveTab('message');
-    else setActiveTab('url'); // For combined, URL tab is highlighted with text ready
+    else setActiveTab('url');
 
     addToast(`Loaded scenario: ${sc.title}`, 'info');
   };
@@ -130,7 +168,50 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto font-sans">
+      {/* SAVED CASE BANNER */}
+      {currentReport && (
+        <div data-testid="saved-case-banner" className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+            <div className="p-2.5 bg-teal-100 text-teal-800 rounded-xl shrink-0">
+              <FolderArchive className="w-5 h-5 text-teal-800" />
+            </div>
+            <div>
+              <div className="text-[11px] text-teal-800 font-bold uppercase tracking-wider">
+                Viewing Saved Case Record
+              </div>
+              <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span className="font-mono text-teal-950 font-bold">{currentReport.case_id}</span>
+                <span className="text-xs font-normal text-slate-600">
+                  • Analyzed on {formatCaseDate(currentReport.timestamp)}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 rtl:space-x-reverse self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isInvestigating}
+              className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+              title="Run a new analysis with these inputs (creates a new case)"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Re-run Analysis</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseSavedCase}
+              className="px-3 py-1.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-slate-700 text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1"
+              title="Close saved case and clear studio inputs"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* SECTION 1: Single Primary Action Intake Studio */}
       <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
@@ -310,8 +391,39 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
             onOpenShareSafe={() => setIsShareModalOpen(true)}
           />
 
+          {/* Models Used for This Case Strip */}
+          <div data-testid="models-used-strip" className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2 rtl:space-x-reverse">
+              <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
+              <span className="font-bold text-slate-900">Models Used for This Case:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+              <span className="px-2 py-0.5 rounded bg-white border border-stone-200 text-slate-700" title="Machine Learning Phishing Classifier">
+                URL: <strong className="text-teal-900">{currentReport.model_versions?.url_classifier || 'RandomForest (PhiUSIIL)'}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-white border border-stone-200 text-slate-700" title="NLP Social Engineering Classifier">
+                NLP: <strong className="text-teal-900">{currentReport.model_versions?.nlp_classifier || 'MultinomialNB (PK Lures)'}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-white border border-stone-200 text-slate-700" title="Symbolic Expert Rules Engine">
+                Rules: <strong className="text-teal-900">{currentReport.model_versions?.expert_rules || 'v1.2 (Symbolic IF-THEN)'}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-white border border-stone-200 text-slate-700" title="Forensic Report Explainer">
+                Explainer: <strong className="text-teal-900">{currentReport.model_versions?.explainer || 'Gemini 2.5 Flash'}</strong>
+              </span>
+            </div>
+          </div>
+
           {/* Immediate Action Protocol Card */}
           <ActionPlanCard report={currentReport} />
+
+          {/* Interactive Agent Pipeline Graph */}
+          <AgentWorkflowGraph
+            trace={currentReport.agent_execution_trace || []}
+            urlResult={currentReport.url_result}
+            nlpResult={currentReport.nlp_result}
+            visionResult={currentReport.vision_result}
+            triggeredRules={currentReport.triggered_rules}
+          />
 
           {/* Collapsible Deep-Dive Sections (Collapsed by default per Part 2) */}
           <div className="space-y-3 pt-2">
