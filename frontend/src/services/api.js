@@ -1,0 +1,78 @@
+const API_BASE = '/api';
+
+export async function createInvestigation(payload) {
+  const res = await fetch(`${API_BASE}/investigations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to create investigation');
+  }
+  return res.json();
+}
+
+export async function listInvestigations(limit = 50) {
+  const res = await fetch(`${API_BASE}/investigations?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch investigations list');
+  return res.json();
+}
+
+export async function getInvestigation(caseId) {
+  const res = await fetch(`${API_BASE}/investigations/${caseId}`);
+  if (!res.ok) throw new Error(`Failed to load case ${caseId}`);
+  return res.json();
+}
+
+export async function deleteInvestigation(caseId) {
+  const res = await fetch(`${API_BASE}/investigations/${caseId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete investigation');
+  return res.json();
+}
+
+export async function getModelMetrics() {
+  const res = await fetch(`${API_BASE}/models/metrics`);
+  if (!res.ok) throw new Error('Failed to load model metrics');
+  return res.json();
+}
+
+export async function getRulesCatalog() {
+  const res = await fetch(`${API_BASE}/rules`);
+  if (!res.ok) throw new Error('Failed to load expert rules catalog');
+  return res.json();
+}
+
+export async function getDashboardStats() {
+  const res = await fetch(`${API_BASE}/stats`);
+  if (!res.ok) throw new Error('Failed to load dashboard stats');
+  return res.json();
+}
+
+export async function getHealthStatus() {
+  const res = await fetch(`${API_BASE}/health`);
+  if (!res.ok) throw new Error('Failed to fetch health status');
+  return res.json();
+}
+
+export async function analyzeUrlDirect(url) {
+  const res = await fetch(`${API_BASE}/analyze/url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) throw new Error('URL analysis failed');
+  return res.json();
+}
+
+export async function analyzeMessageDirect(text) {
+  const res = await fetch(`${API_BASE}/analyze/message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error('Message analysis failed');
+  return res.json();
+}

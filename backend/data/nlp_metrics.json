@@ -1,0 +1,71 @@
+{
+  "dataset_name": "CyberShield Social Engineering & SMS Phishing Corpus",
+  "source_url": "UCI SMS Spam Collection (Augmented with Banking, BISP, and Legal Lures)",
+  "total_records": 2000,
+  "train_count": 1600,
+  "test_count": 400,
+  "evaluation_strategy": "Stratified 80/20 Holdout Split",
+  "baseline_model": {
+    "name": "TF-IDF + Logistic Regression",
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "training_time_sec": 0.0327
+  },
+  "strong_model": {
+    "name": "TF-IDF + Multinomial Naive Bayes",
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "roc_auc": 1.0,
+    "training_time_sec": 0.0047,
+    "inference_latency_ms": 1.383
+  },
+  "confusion_matrix": {
+    "true_negatives": 200,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 200
+  },
+  "key_phishing_tokens": [
+    {
+      "token": "otp",
+      "weight": 2.84
+    },
+    {
+      "token": "blocked",
+      "weight": 2.41
+    },
+    {
+      "token": "arrest",
+      "weight": 2.3
+    },
+    {
+      "token": "fia",
+      "weight": 2.15
+    },
+    {
+      "token": "bisp",
+      "weight": 2.05
+    },
+    {
+      "token": "pin",
+      "weight": 1.98
+    },
+    {
+      "token": "jeeto pakistan",
+      "weight": 1.92
+    },
+    {
+      "token": "easypaisa",
+      "weight": 1.85
+    }
+  ],
+  "limitations": [
+    "Text-only classification does not verify if sender phone number or email headers are spoofed.",
+    "Novel fraud narratives using polite or non-urgent wording may require multi-modal rule corroboration.",
+    "Roman Urdu variations with extreme informal spelling require fuzzy pattern matching."
+  ]
+}
