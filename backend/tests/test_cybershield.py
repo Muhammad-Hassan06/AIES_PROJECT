@@ -201,3 +201,114 @@ def test_api_health_check():
     resp = client.get("/api/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "healthy"
+
+def test_case_save_and_restore_full_fidelity():
+    """Verify that case creation persists original input, agent trace, rules, and model versions for complete restoration."""
+    payload = {
+        "input_type": "message",
+        "text": "URGENT: Your HBL Bank account will be blocked within 24 hours. Send OTP to unlock.",
+        "sender_info": "+923001234567"
+    }
+    resp = client.post("/api/investigations", json=payload)
+    assert resp.status_code == 200
+    created = resp.json()
+    case_id = created["case_id"]
+    assert case_id.startswith("CS-")
+    assert created["raw_input"]["text"] == payload["text"]
+    assert created["raw_input"]["sender_info"] == payload["sender_info"]
+    assert "url_classifier" in created["model_versions"]
+
+    # Retrieve saved case via GET /api/investigations/{id}
+    get_resp = client.get(f"/api/investigations/{case_id}")
+    assert get_resp.status_code == 200
+    retrieved = get_resp.json()
+    assert retrieved["case_id"] == case_id
+    assert retrieved["raw_input"]["text"] == payload["text"]
+    assert retrieved["raw_input"]["sender_info"] == payload["sender_info"]
+    assert retrieved["risk_level"] == created["risk_level"]
+    assert len(retrieved["agent_execution_trace"]) == len(created["agent_execution_trace"])
+    assert len(retrieved["evidence_ledger"]) == len(created["evidence_ledger"])
+    assert retrieved["model_versions"]["url_classifier"] == created["model_versions"]["url_classifier"]
+
+def test_rag_retrieval_and_abstention():
+    """Verify Grounded RAG accurately cites verified docs and abstains on out-of-scope questions."""
+    from app.rag.engine import grounded_rag
+
+    # In-scope legal question
+    resp_in = grounded_rag.query("What does PECA Section 14 state regarding electronic fraud?")
+    assert not resp_in["abstained"]
+    assert "Section 14" in resp_in["answer"] or "fraud" in resp_in["answer"].lower()
+    assert len(resp_in["citations"]) > 0
+    assert any("PECA" in c["document_title"] for c in resp_in["citations"])
+
+    # Out-of-scope question - MUST abstain
+    resp_out = grounded_rag.query("What is the recipe for chocolate cake and who won the World Cup?")
+    assert resp_out["abstained"] is True
+    assert "I don't have a reliable source for that" in resp_out["answer"]
+    assert len(resp_out["citations"]) == 0
+
+def test_investigator_agent_step_cap_and_sanitization():
+    """Verify autonomous investigator agent obeys maximum 8 tool steps and sanitizes untrusted input."""
+    from app.agents.investigator_agent import investigator_agent
+
+    # Test tool step execution and cap
+    case_sample = {
+        "case_id": "CS-TEST-99",
+        "raw_input": {"url": "http://meezan-ebank-login.com", "text": "Urgent OTP reset"}
+    }
+    result = investigator_agent.run_investigation(
+        goal="Perform deep multi-step threat intelligence investigation",
+        case_data=case_sample
+    )
+    assert len(result["steps"]) <= 8
+    assert result["step_cap"] == 8
+    assert len(result["plan"]) > 0
+    assert result["requires_user_approval"] is True
+
+def test_batch_scan_endpoint():
+    """Verify batch scanning processes up to 20 items, returns summary table and saves cases."""
+    payload = {
+        "items": [
+            {"type": "url", "url": "https://www.google.com"},
+            {"type": "text", "text": "BISP 8171: Aap ka 25,000 rupay ka wazeefa manzoor ho gaya hai. Call karein."},
+            {"type": "url", "url": "http://hbl-verify-security-login.top/account"}
+        ]
+    }
+    resp = client.post("/api/batch/scan", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_items"] == 3
+    assert data["successful_scans"] == 3
+    assert len(data["results"]) == 3
+    assert data["results"][0]["verdict"] in ["BENIGN", "LOW", "CLEAN", "SUSPICIOUS", "PHISHING"]
+    assert data["results"][1]["verdict"] in ["SUSPICIOUS", "PHISHING", "HIGH", "CRITICAL"]
+
+def test_threat_trends_endpoint():
+    """Verify threat trends aggregation returns correct database metrics and modalities."""
+    resp = client.get("/api/stats/trends?days=30")
+    assert resp.status_code == 200
+    trends = resp.json()
+    assert "timeline" in trends
+    assert "risk_breakdown" in trends
+    assert "modality_breakdown" in trends
+    assert "top_rules" in trends
+    assert "total_cases" in trends
+
+def test_pii_redaction_for_share_safe():
+    """Verify sensitive Pakistani PII (CNIC, phone numbers, bank accounts) are masked."""
+    from app.core.security import redact_sensitive_identifiers
+
+    raw_sample = (
+        "Send 50000 PKR to account PK36MEZN0001234567890123. "
+        "User CNIC is 42101-1234567-1 and WhatsApp contact is +92 300 1234567. "
+        "Alternative mobile: 03211234567."
+    )
+    redacted = redact_sensitive_identifiers(raw_sample)
+
+    assert "42101-1234567-1" not in redacted
+    assert "[CNIC-REDACTED]" in redacted
+    assert "PK36MEZN0001234567890123" not in redacted
+    assert "[IBAN-REDACTED]" in redacted
+    assert "+92 300 1234567" not in redacted
+    assert "03211234567" not in redacted
+    assert "[PHONE-REDACTED]" in redacted

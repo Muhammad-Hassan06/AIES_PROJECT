@@ -116,3 +116,33 @@ def validate_image_header(file_bytes: bytes) -> Tuple[bool, str]:
         return True, "image/webp"
 
     return False, "Unsupported file format. Only PNG, JPEG, and WebP are allowed."
+
+def redact_sensitive_identifiers(text: str) -> str:
+    """
+    Redacts Pakistani PII identifiers for 'Share-Safe' export:
+    - National Identity Cards (CNIC: XXXXX-XXXXXXX-X)
+    - Mobile and landline phone numbers (+92 3XX-XXXXXXX, 03XXXXXXXXX)
+    - Pakistani IBANs (PKXX ABCD XXXXXXXXXXXXXXXX) and standard 12-16 digit bank accounts
+    """
+    if not text:
+        return ""
+
+    redacted = text
+
+    # Redact Pakistani CNICs: 5 digits - 7 digits - 1 digit
+    cnic_pattern = r"\b\d{5}[- ]\d{7}[- ]\d\b|\b\d{13}\b"
+    redacted = re.sub(cnic_pattern, "[CNIC-REDACTED]", redacted)
+
+    # Redact Pakistani IBANs (PK followed by 2 digits, 4 letters, 16 digits)
+    iban_pattern = r"\bPK\d{2}[A-Za-z]{4}\d{16}\b"
+    redacted = re.sub(iban_pattern, "[IBAN-REDACTED]", redacted, flags=re.IGNORECASE)
+
+    # Redact 14-16 digit bank account numbers
+    acct_pattern = r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{2,4}\b"
+    redacted = re.sub(acct_pattern, "[ACCOUNT-REDACTED]", redacted)
+
+    # Redact Pakistani Mobile Numbers (+92-3XX-XXXXXXX, 03XXXXXXXXX)
+    pk_phone_pattern = r"(\+92|0092|0)[- ]?3\d{2}[- ]?\d{7}\b"
+    redacted = re.sub(pk_phone_pattern, "[PHONE-REDACTED]", redacted)
+
+    return redacted

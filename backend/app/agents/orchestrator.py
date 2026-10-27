@@ -388,6 +388,22 @@ class AgenticInvestigationOrchestrator:
             "The system does not submit complaints automatically to government bodies."
         ]
 
+        raw_input_data = {
+            "url": url or "",
+            "text": text or "",
+            "sender_info": sender_info or "",
+            "screenshot_name": "screenshot.png" if screenshot_base64 else "",
+            "manual_indicators": manual_indicators or []
+        }
+
+        active_model_versions = {
+            "url_classifier": "RandomForest-v1.0 (PhiUSIIL)",
+            "nlp_classifier": "MultinomialNB-v1.0 (Pakistani Lures)",
+            "expert_rules": "v1.2 (Symbolic IF-THEN)",
+            "ocr_engine": "Tesseract OCR v5.0",
+            "explainer": "Google Gemini 2.5 Flash / Fallback Synthesizer"
+        }
+
         report = InvestigationReport(
             case_id=case_id,
             timestamp=iso_timestamp,
@@ -407,7 +423,9 @@ class AgenticInvestigationOrchestrator:
             agent_execution_trace=trace,
             url_result=url_result_obj,
             nlp_result=nlp_result_obj,
-            vision_result=vision_result_obj
+            vision_result=vision_result_obj,
+            raw_input=raw_input_data,
+            model_versions=active_model_versions
         )
 
         return report

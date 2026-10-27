@@ -133,6 +133,8 @@ class InvestigationReport(BaseModel):
     url_result: Optional[URLAnalysisResult] = None
     nlp_result: Optional[NLPAnalysisResult] = None
     vision_result: Optional[ScreenshotAnalysisResult] = None
+    raw_input: Dict[str, Any] = Field(default_factory=dict)
+    model_versions: Dict[str, str] = Field(default_factory=dict)
 
 class InvestigationCreateRequest(BaseModel):
     input_type: InvestigationType
