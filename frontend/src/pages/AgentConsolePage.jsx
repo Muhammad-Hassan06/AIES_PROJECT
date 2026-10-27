@@ -45,6 +45,7 @@ export default function AgentConsolePage() {
   const [agentResult, setAgentResult] = useState(null);
   const [approvalStatus, setApprovalStatus] = useState('PENDING'); // 'PENDING' | 'APPROVED' | 'SAVED'
   const [savedCaseId, setSavedCaseId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   // Follow-up chat state
   const [chatQuestion, setChatQuestion] = useState('');
@@ -57,6 +58,7 @@ export default function AgentConsolePage() {
     setAgentResult(null);
     setApprovalStatus('PENDING');
     setChatLogs([]);
+    setErrorMessage(null);
   };
 
   const handleStartInvestigation = async () => {
@@ -68,12 +70,14 @@ export default function AgentConsolePage() {
     setApprovalStatus('PENDING');
     setSavedCaseId(null);
     setChatLogs([]);
+    setErrorMessage(null);
 
     try {
       const res = await runAgentInvestigation(goal, activeCaseData);
       setAgentResult(res);
     } catch (err) {
       console.error('Agent investigation error', err);
+      setErrorMessage(err.response?.data?.detail || err.message || 'Failed to complete agent investigation.');
     } finally {
       setIsRunning(false);
     }
@@ -222,6 +226,14 @@ export default function AgentConsolePage() {
         </div>
       </div>
 
+      {/* Error Alert */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-900 flex items-center space-x-2">
+          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Agent Output & Reasoning Stream */}
       {agentResult && (
         <div className="space-y-6">
@@ -237,17 +249,32 @@ export default function AgentConsolePage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-              {agentResult.plan?.map((stepText, idx) => (
-                <div key={idx} className="bg-stone-50 border border-stone-200 rounded-xl p-2.5 text-xs text-slate-700">
-                  <div className="text-[10px] font-mono text-teal-800 font-bold mb-0.5">
-                    Step {idx + 1}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {agentResult.plan?.map((stepItem, idx) => {
+                const stepNum = typeof stepItem === 'object' && stepItem?.step ? stepItem.step : idx + 1;
+                const toolName = typeof stepItem === 'object' && stepItem?.tool ? stepItem.tool : null;
+                const desc = typeof stepItem === 'object' 
+                  ? (stepItem.reason || stepItem.description || stepItem.tool || JSON.stringify(stepItem)) 
+                  : String(stepItem);
+
+                return (
+                  <div key={idx} className="bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-slate-700 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] font-mono text-teal-800 font-bold mb-1 flex items-center justify-between">
+                        <span>Step {stepNum}</span>
+                        {toolName && (
+                          <span className="font-mono text-[9px] px-1.5 py-0.5 bg-teal-100/70 border border-teal-200 rounded text-teal-900">
+                            {toolName}()
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] font-medium leading-relaxed text-slate-800">
+                        {desc}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] font-medium leading-tight text-slate-800">
-                    {stepText}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

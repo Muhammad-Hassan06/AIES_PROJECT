@@ -2,6 +2,7 @@ import time
 import json
 from typing import List, Dict, Any, Optional
 
+from app.core.config import settings
 from app.core.security import sanitize_evidence_text, sanitize_url
 from app.ml.url_classifier import url_classifier
 from app.nlp.text_classifier import text_classifier
@@ -307,6 +308,33 @@ class InvestigatorAgent:
             answer = f"Recommended actions for Case {case_id}: " + "; ".join(actions)
         else:
             answer = f"For Case {case_id} ({risk} risk, {conf:.1%} confidence), the system found {len(rules)} matched rules. Executive briefing: {summary}"
+
+        # If Gemini API key is configured, synthesize an intelligent context-grounded response
+        if settings.GEMINI_API_KEY:
+            try:
+                from google import genai
+                client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                prompt = f"""You are CyberShield AI's senior forensic investigation agent in Pakistan.
+The user is asking a follow-up question regarding an active fraud investigation.
+Answer directly, clearly, concisely, and objectively based on the verified case details below.
+
+Case ID: {case_id}
+Risk Verdict: {risk}
+Confidence: {conf:.1%}
+Triggered Expert Rules: {', '.join(rules) if rules else 'None'}
+Executive Summary: {summary}
+
+User Question: {user_question}
+"""
+                resp = client.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=prompt
+                )
+                if resp.text:
+                    answer = resp.text.strip()
+            except Exception as e:
+                # Silently retain deterministic answer
+                pass
 
         return {
             "case_id": case_id,
