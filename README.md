@@ -163,6 +163,9 @@ cd frontend
 # Install dependencies
 npm install
 
+# Run frontend test suite (10/10 passing)
+npm test
+
 # Build production bundle (verified 0 errors)
 npm run build
 
@@ -173,14 +176,15 @@ Open `http://localhost:5173/` in your browser.
 
 ---
 
-## 6. Automated Test Suite (100% Pass)
+## 6. Automated Test Suites (100% Pass)
 
-Run all tests via pytest:
+CyberShield AI enforces end-to-end verification across both its Python backend and React frontend.
+
+### A. Backend Pytest Suite (19/19 Passing)
 ```bash
-cd backend
-python -m pytest tests/test_cybershield.py -v
+$env:PYTHONPATH="backend"
+python -m pytest backend/tests/test_cybershield.py -v
 ```
-
 Output:
 ```text
 tests/test_cybershield.py::test_url_feature_extraction_lexical PASSED    [  5%]
@@ -206,9 +210,55 @@ tests/test_cybershield.py::test_api_health_check PASSED                  [100%]
 ============================= 19 passed in 20.30s =============================
 ```
 
+### B. Frontend Vitest Suite (10/10 Passing across 4 Suites)
+```bash
+cd frontend
+npm test
+```
+Output:
+```text
+ ✓ src/test/redact.test.js (5 tests)
+   ✓ masks Pakistani CNIC in standard format
+   ✓ masks mobile numbers with unmasked prefix and suffix
+   ✓ masks credit card and 16-digit bank account numbers
+   ✓ masks OTP authentication codes
+   ✓ preserves non-sensitive text without altering message meaning
+ ✓ src/test/language.test.jsx (1 test)
+   ✓ switches language between English, Urdu, and Roman Urdu with dir=rtl
+ ✓ src/test/collapsible.test.jsx (2 tests)
+   ✓ renders collapsed by default with proper aria attributes
+   ✓ expands and collapses content when clicked
+ ✓ src/test/verdict.test.jsx (2 tests)
+   ✓ renders risk verdict card with gauge, plain-language summary, and actions
+   ✓ renders calm insufficient evidence state cleanly
+
+ Test Files  4 passed (4)
+      Tests  10 passed (10)
+```
+
 ---
 
-## 7. Interactive Demonstration Scenarios
+## 7. Modern Light Theme & Progressive Disclosure UI Architecture
+
+CyberShield AI features an accessible, human-centered **Light Design System** engineered specifically to combat user anxiety and cognitive fatigue during high-stress cyber threat triage:
+
+- **Warm Editorial Color Tokens**:
+  - Background: Warm off-white (`#FAFAF9` / Stone 50)
+  - Card & Surface: Crisp white (`#FFFFFF`) with soft neutral borders (`#E7E5E4` / Stone 200)
+  - Typography: Deep slate (`#0F172A`) for high legibility and muted slate (`#64748B`) for secondary metadata
+  - Primary Accent: Deep authoritative teal (`#0F766E` / Teal 700)
+  - Risk Semantic Colors: Accessible WCAG AA-compliant palette (Critical `#DC2626`, High `#EA580C`, Medium `#D97706`, Low `#16A34A`, Insufficient Evidence `#475569`)
+- **Calm Progressive Disclosure**:
+  - Max 3 visual sections above the fold
+  - Primary Hero: Prominent **Risk Verdict Card** featuring an animated semicircle gauge, plain-language verdict summary, and immediate action buttons
+  - **Simple / Technical View Toggle**: Lets non-technical citizens read clear guidance while forensic analysts can instantly toggle full technical model scores, token offsets, and raw telemetry
+  - **Collapsible Evidence Sections**: Detailed technical dossiers (Evidence Ledger, Rule Executions, Token Attribution, Provenance Audit) are cleanly collapsed by default with smooth micro-transitions and full keyboard/screen-reader accessibility
+- **Multilingual RTL Architecture**:
+  - Supports **English**, **Urdu (اردو)** with native RTL layout and Google *Noto Nastaliq Urdu* typography, and **Roman Urdu** for localized comprehension across Pakistan.
+
+---
+
+## 8. Interactive Demonstration Scenarios
 
 In the **Investigation Studio**, 5 pre-loaded realistic scenarios are ready for 1-click evaluation:
 1. **HBL Bank Smishing (OTP Theft)**: Demonstrates credential harvesting on disposable `.top` domain, triggering `RULE_CRED_01` (CRITICAL).
@@ -219,7 +269,73 @@ In the **Investigation Studio**, 5 pre-loaded realistic scenarios are ready for 
 
 ---
 
-## 8. Limitations & Future Extensions
+## 9. Changelog: 12-Feature Redesign & Enhancement
+
+### Feature 1: One-Click Demo Scenario Cards
+- Added 5 curated one-click scenario cards right on the home intake studio with realistic Pakistani fraud vectors (Bank Smishing, BISP lottery, Detained parcel, Legitimate advisory, Cross-modal conflict) enabling instant demonstration without manual typing.
+
+### Feature 2: Highlighted Message View with Threat Categories
+- Implemented character-offset inline highlighted message renderer with semantic color-coded underlines per category:
+  - Red underline: Credential Harvesting & 2FA Theft
+  - Orange underline: Urgency & Legal Coercion
+  - Amber underline: Financial Demands & Advance-Fees
+  - Purple underline: Impersonation of Banks or Government Institutions
+  - Blue underline: Malicious & Disposable Links
+- Includes interactive hover tooltips explaining why each span was flagged and a dynamic legend displaying only active categories.
+
+### Feature 3: Actionable "What should I do now?" Card
+- Designed a prominent, non-panicky action card customized to the detected risk level with step-by-step guidance (e.g. "Do not reply or share OTP", "Block sender", "Contact your bank's official UAN").
+- Added 1-click **Copy Investigation Report** to clipboard and **Print / Save as PDF** with clean print styling.
+
+### Feature 4: Privacy-First Share-Safe Summary Modal
+- Built a redaction pipeline (`src/utils/redact.js`) that automatically masks:
+  - Pakistani CNICs (`XXXXX-XXXXXXX-X`)
+  - Mobile numbers (`03XX-***-XXXX`)
+  - Credit cards and 16-digit bank accounts (`****-****-****-1234`)
+  - OTP authentication codes
+- Generates a sanitized summary suitable for sharing with family, community groups, or posting on social media, with 1-click WhatsApp share and clipboard copy.
+
+### Feature 5: Searchable Case Vault with Trend Insights
+- Added a high-performance case history browser in the **Cases** tab with instant text search, multi-filter dropdowns (Risk Level, Modality, Date Range), and single-case deletion with confirmation.
+- Integrated Recharts visual trends in the **Insights** tab showing threat distribution by risk tier and modality over time.
+
+### Feature 6: Full Multilingual Support (English, Urdu & Roman Urdu)
+- Integrated `LanguageContext` supporting English, Urdu, and Roman Urdu across all primary UI navigation, buttons, and analysis views.
+- Implemented full RTL (`dir="rtl"`) layout switching and applied the elegant *Noto Nastaliq Urdu* font family for native Urdu text.
+
+### Feature 7: Pakistan Cyber Awareness Center
+- Built an educational hub featuring:
+  - **Scam of the Day**: Rotating real-world scams commonly targeting Pakistani citizens (BISP lottery, fake electricity bill disconnection, WhatsApp verification code forwarding, overseas job offers) with warning signs and prevention tips.
+  - **Spot the Scam Mini-Quiz**: Interactive scenario questions with immediate explanatory feedback to build public cyber hygiene.
+
+### Feature 8: Model Transparency & Honest Audit Dashboard
+- Built a live Model Intelligence view querying `/api/models/metrics` for live feature weights, ROC-AUC curves, and confusion matrix data.
+- Added explicit scientific transparency notice clarifying that the 100% test accuracy on the UCI PhiUSIIL dataset reflects held-out benchmark splits and is subject to benchmark leakage in lexical datasets, balanced in production by the symbolic Expert System.
+
+### Feature 9: Reassuring "Insufficient Evidence" Outcome
+- Elevated "Insufficient Evidence" to a first-class, calm result state with neutral slate styling (`#475569`), reassuring the user that the system does not jump to false conclusions and offering actionable next steps on what additional signals to supply.
+
+### Feature 10: Official Authority Reporting Helper (NCCIA & PKCERT)
+- Developed an authority guidance card detailing the explicit mandates:
+  - **NCCIA** (`complaint.nccia.gov.pk` / helpline `9999`) for individuals and citizen cybercrime complaints.
+  - **PKCERT** (`pkcert.gov.pk/report-incident/`) for organizational security teams and critical infrastructure.
+- Features a printable evidence checklist and an unambiguous disclaimer stating CyberShield AI never automatically submits reports on the user's behalf.
+
+### Feature 11: Privacy & System Preference Settings
+- Built a dedicated **Settings** page offering:
+  - Configurable data retention policies (7 days, 30 days, 90 days, or Manual Only).
+  - Destructive **Purge All Cases** action with a secure confirmation dialog.
+  - Default view mode preference (Simple vs. Technical).
+  - Default language selection (English, Urdu, Roman Urdu).
+
+### Feature 12: Modern Input Polish & Mobile Responsiveness
+- Added 1-click **Paste from Clipboard** button for quick message intake.
+- Drag-and-drop screenshot upload dropzone with thumbnail preview and file size validation.
+- Responsive mobile bottom tab bar navigation for seamless operation across smartphones, tablets, and desktop workstations.
+
+---
+
+## 10. Limitations & Future Extensions
 
 - **Static vs Dynamic Web Analysis**: CyberShield AI performs static lexical and structural analysis of URLs. To avoid SSRF and malicious payload execution, live in-browser DOM and JavaScript execution is not performed.
 - **Sender Verification**: NLP models evaluate message semantics and cannot independently cryptographically verify SS7 telecom headers or SIM card ownership without telco carrier integration.
@@ -227,8 +343,9 @@ In the **Investigation Studio**, 5 pre-loaded realistic scenarios are ready for 
 
 ---
 
-## 9. Academic Project Metadata
+## 11. Academic Project Metadata
 
 - **Course**: Artificial Intelligence and Expert Systems (AIES)
 - **Project**: Semester Project 3 — CyberShield AI
-- **Technologies**: Python 3.14, FastAPI, Scikit-Learn, PyTorch/Transformers, Pillow, SQLite, React 19, Vite, Tailwind CSS, Lucide Icons, Recharts.
+- **Technologies**: Python 3.14, FastAPI, Scikit-Learn, PyTorch/Transformers, Pillow, SQLite, React 19, Vite, Tailwind CSS, Lucide Icons, Recharts, Vitest.
+
