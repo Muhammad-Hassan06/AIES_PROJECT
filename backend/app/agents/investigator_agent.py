@@ -59,9 +59,11 @@ class InvestigatorAgent:
         try:
             if tool_name == "analyze_url":
                 raw_url = arguments.get("url", "")
-                safe_url, is_valid = sanitize_url(raw_url)
-                if not is_valid:
-                    res = {"status": "blocked", "reason": "URL destination blocked by SSRF safety filter or invalid scheme."}
+                safe_url = sanitize_url(raw_url)
+                from app.core.security import validate_url_safe_for_network
+                is_safe, msg = validate_url_safe_for_network(safe_url)
+                if not is_safe:
+                    res = {"status": "blocked", "reason": f"URL destination blocked by safety filter: {msg}"}
                 else:
                     pred = url_classifier.predict(safe_url)
                     res = {
@@ -73,7 +75,7 @@ class InvestigatorAgent:
                     }
             elif tool_name == "analyze_message":
                 raw_text = arguments.get("text", "")
-                clean_text = sanitize_evidence_text(raw_text)
+                clean_text, _ = sanitize_evidence_text(raw_text)
                 analysis = text_classifier.analyze(clean_text)
                 res = {
                     "is_social_engineering": analysis.is_social_engineering,
@@ -168,7 +170,7 @@ class InvestigatorAgent:
         Executes autonomous multi-step investigation loop up to 8 steps.
         Produces structured plan, step execution trace, and synthesized verdict.
         """
-        sanitized_goal = sanitize_evidence_text(goal)
+        sanitized_goal, _ = sanitize_evidence_text(goal)
         steps_timeline = []
 
         # 1. Determine plan based on goal and case data
@@ -292,7 +294,8 @@ class InvestigatorAgent:
 
     def chat_about_case(self, case_record: Dict[str, Any], user_question: str) -> Dict[str, Any]:
         """Context-grounded follow-up chat using the saved case record."""
-        clean_q = sanitize_evidence_text(user_question).lower()
+        clean_q_raw, _ = sanitize_evidence_text(user_question)
+        clean_q = clean_q_raw.lower()
         case_id = case_record.get("case_id", "Unknown")
         risk = case_record.get("risk_level", "LOW")
         conf = case_record.get("model_confidence", 0.0)
