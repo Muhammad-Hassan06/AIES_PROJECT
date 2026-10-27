@@ -1,0 +1,29 @@
+{
+  "doc_id": "CERT_PK_SMISHING",
+  "title": "National CERT Advisory (NCA-11.052424) — Smishing Alerts and Fake Delivery Package Threats",
+  "source_url": "https://pkcert.gov.pk/report-incident.asp",
+  "publisher": "Pakistan Computer Emergency Response Team (PKCERT) & National CERT",
+  "retrieval_date": "2026-10-27",
+  "language": "en",
+  "category": "National Cyber Threat Advisory",
+  "sections": [
+    {
+      "section_number": "1",
+      "heading": "Threat Overview: Smishing Targeting Pakistani Citizens",
+      "legal_text": "Threat actors are conducting widespread SMS phishing (smishing) campaigns impersonating Pakistan Post, major courier services (TCS, Leopard), and banking institutions. Attackers dispatch SMS alerts alleging detained parcels, incomplete addresses, or pending customs duties of small sums (e.g., Rs. 85 to Rs. 850) to deceive recipients into entering credit/debit card credentials and OTP codes on cloned portals hosted on disposable TLDs (.top, .xyz, .buzz).",
+      "summary": "Explains how fake courier detention notices lure citizens into surrendering payment credentials."
+    },
+    {
+      "section_number": "2",
+      "heading": "Critical Detection Indicators",
+      "legal_text": "1. Senders using standard 11-digit personal mobile numbers (e.g. 0300-XXXXXXX) rather than registered alpha-numeric enterprise short-codes. 2. Shortened links (bit.ly, tinyurl) or URLs ending in suspicious foreign TLDs (.top, .xyz, .live, .cc) instead of official .gov.pk or .pk domains. 3. Manufactured urgency demanding compliance within 24 to 48 hours to avoid package return or account cancellation. 4. Demands for advance verification fees via Easypaisa, JazzCash, or bank transfer.",
+      "summary": "Checklist of technical indicators that confirm an SMS message is malicious."
+    },
+    {
+      "section_number": "3",
+      "heading": "Recommended Incident Response & Mitigation",
+      "legal_text": "1. Do not click on links embedded in unverified SMS messages. 2. Never disclose One-Time Passwords (OTPs), ATM PINs, or CNIC numbers via phone call or SMS. 3. Immediately report smishing domains to PKCERT at cert@pkcert.gov.pk and the National CERT incident reporting portal (https://pkcert.gov.pk/report-incident.asp). 4. If credentials were provided, immediately block payment cards through the issuing bank's official helpline.",
+      "summary": "Steps for victims to contain credential leakage and report domains to national responders."
+    }
+  ]
+}

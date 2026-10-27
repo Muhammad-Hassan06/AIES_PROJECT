@@ -76,3 +76,79 @@ export async function analyzeMessageDirect(text) {
   if (!res.ok) throw new Error('Message analysis failed');
   return res.json();
 }
+
+// ---------------- Grounded RAG ----------------
+
+export async function queryRAG(query, language = 'en') {
+  const res = await fetch(`${API_BASE}/rag/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, language }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Knowledge base query failed');
+  }
+  return res.json();
+}
+
+export async function getRAGCorpus() {
+  const res = await fetch(`${API_BASE}/rag/corpus`);
+  if (!res.ok) throw new Error('Failed to fetch knowledge base corpus');
+  return res.json();
+}
+
+export async function getRAGEvaluation() {
+  const res = await fetch(`${API_BASE}/rag/evaluation`);
+  if (!res.ok) throw new Error('Failed to run RAG evaluation benchmark');
+  return res.json();
+}
+
+// ---------------- Investigator Agent ----------------
+
+export async function runAgentInvestigation(goal, caseData = null, caseId = null) {
+  const res = await fetch(`${API_BASE}/agent/investigate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goal, case_data: caseData, case_id: caseId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Investigator Agent execution failed');
+  }
+  return res.json();
+}
+
+export async function chatAgentCase(caseContext, question) {
+  const res = await fetch(`${API_BASE}/agent/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ case_context: caseContext, question }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Case follow-up chat failed');
+  }
+  return res.json();
+}
+
+// ---------------- Threat Trends & Batch Scan ----------------
+
+export async function getThreatTrends(days = 30) {
+  const res = await fetch(`${API_BASE}/stats/trends?days=${days}`);
+  if (!res.ok) throw new Error('Failed to fetch threat trends');
+  return res.json();
+}
+
+export async function runBatchScan(items) {
+  const res = await fetch(`${API_BASE}/batch/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Batch scan failed');
+  }
+  return res.json();
+}

@@ -1,0 +1,29 @@
+{
+  "doc_id": "SBP_CONSUMER_PROTECTION",
+  "title": "State Bank of Pakistan Consumer Protection Directives on Digital Banking & OTP Fraud",
+  "source_url": "https://www.sbp.org.pk/cpd/cpd.asp",
+  "publisher": "State Bank of Pakistan (SBP) — Consumer Protection Department",
+  "retrieval_date": "2026-10-27",
+  "language": "en",
+  "category": "Central Bank Regulatory Directive",
+  "sections": [
+    {
+      "section_number": "1",
+      "heading": "Confidentiality of Authentication Credentials (OTP & PINs)",
+      "legal_text": "Commercial banks, microfinance banks, and electronic money institutions (EMIs) shall never solicit customer credentials, passwords, PINs, or One-Time Passwords (OTPs) through outbound telephone calls, SMS, or email messages. Any communication requesting the disclosure of an OTP under the pretext of account unblocking, biometric reverification, or transaction cancellation is fraudulent per se.",
+      "summary": "Establishes that no bank or financial regulator in Pakistan is permitted to ask customers for an OTP."
+    },
+    {
+      "section_number": "2",
+      "heading": "Transition to In-App TPIN / FPIN and Bank Liability Framework",
+      "legal_text": "To mitigate SIM-swap vulnerabilities and telecommunication interception, banks are advised to implement Transaction PIN (TPIN) or Financial PIN (FPIN) protocols within secured mobile applications. Under the regulatory liability framework, if an unauthorized transaction occurs due to bank operational failures or inadequate fraud monitoring without customer gross negligence, the regulated entity is required to reimburse the consumer subject to SBP dispute guidelines.",
+      "summary": "Outlines SBP rules governing unauthorized transactions, banking app security, and customer compensation."
+    },
+    {
+      "section_number": "3",
+      "heading": "Consumer Grievance Redressal Mechanism",
+      "legal_text": "In the event of an unauthorized transaction or fraud dispute, the consumer must lodge an immediate complaint with the concerned bank's 24/7 call center and obtain a formal complaint number. If the bank fails to resolve the dispute within thirty (30) days, the consumer may escalate the grievance to the Banking Mohtasib Pakistan (https://www.bankingmohtasib.gov.pk) or SBP Consumer Protection Department at cpd.helpdesk@sbp.org.pk.",
+      "summary": "Step-by-step escalation path for Pakistani banking consumers to recover stolen funds."
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "doc_id": "LAW_PECA_2016",
+  "title": "Prevention of Electronic Crimes Act, 2016 (PECA) — Sections 13, 14, 16, 17",
+  "source_url": "https://na.gov.pk/uploads/documents/1472635250_286.pdf",
+  "publisher": "National Assembly of Pakistan & Ministry of Information Technology and Telecommunication",
+  "retrieval_date": "2026-10-27",
+  "language": "en",
+  "category": "Statutory Legislation",
+  "sections": [
+    {
+      "section_number": "13",
+      "heading": "Electronic Forgery",
+      "legal_text": "Whoever for unlawful gain or to cause wrongful loss to any other person or with intent to defraud or deceive, inputs, alters, deletes or suppresses electronic data or information system, resulting in unauthentic data or output with the intent that it be considered or acted upon for legal purposes as if it were authentic, regardless of whether or not the data is directly readable and intelligible, shall be punished with imprisonment for a term which may extend to three years or with fine which may extend to two hundred and fifty thousand rupees or with both. Whoever commits electronic forgery in relation to a critical infrastructure information system or data shall be punished with imprisonment for a term which may extend to seven years or with fine which may extend to five million rupees or with both.",
+      "summary": "Covers digital tampering, spoofing official communications, fabricating bank statements, and creating counterfeit government portals."
+    },
+    {
+      "section_number": "14",
+      "heading": "Electronic Fraud",
+      "legal_text": "Whoever, with intent for wrongful gain interferes with or uses any information system, device or data or induces any person to enter into a relationship or deceives any person, which act or omission is likely to cause damage or harm to that person or any other person, shall be punished with imprisonment for a term which may extend to two years or with fine which may extend to ten million rupees or with both.",
+      "summary": "Criminalizes cyber fraud, phishing lures, fraudulent SMS lotteries (e.g. Jeeto Pakistan, fake BISP disbursements), advance-fee schemes, and unauthorized mobile wallet withdrawals."
+    },
+    {
+      "section_number": "16",
+      "heading": "Unauthorized Use of Identity Information",
+      "legal_text": "(1) Whoever obtains, sells, possesses, transmits or uses another person's identity information without authorization shall be punished with imprisonment for a term which may extend to three years or with fine which may extend to five million rupees or with both. (2) Any person whose identity information is obtained, sold, possessed, used or transmitted without authorization may apply to the Authority for securing, destroying, blocking access to or transmission of such information.",
+      "summary": "Prohibits the harvesting, theft, or unauthorized possession of CNICs, banking passwords, PINs, OTP tokens, and biometric credentials."
+    },
+    {
+      "section_number": "17",
+      "heading": "Unauthorized Issuance of SIM Cards",
+      "legal_text": "Whoever sells or provides a Subscriber Identity Module (SIM) card or any module designed for authenticating users to establish network connection without properly obtaining and verifying the subscriber's antecedents in the prescribed manner shall be punished with imprisonment for a term which may extend to three years or with fine which may extend to five hundred thousand rupees or with both.",
+      "summary": "Criminalizes illegal issuance of telecom SIMs without biometric verification, often used by cybercriminals to send smishing blasts."
+    }
+  ]
+}

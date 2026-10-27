@@ -135,23 +135,23 @@ CREATE TABLE IF NOT EXISTS investigations (
 ## 7. Implementation Roadmap & Execution Checklist
 
 - [x] **Step 0**: AUDIT.md documented and committed.
-- [ ] **Part A**: Fix Case History & Vault:
-  - Database schema migration for raw inputs and model versions.
-  - Update `orchestrator.py` and `schemas.py` to persist `raw_input` and `model_versions`.
-  - Frontend: restore inputs on case click, show "Viewing saved case" banner with Re-run / Close.
-  - Implement deep-linking `/cases/CS-XXXX` or `?case=CS-XXXX`.
-  - Fix timestamp formatting (`27 Oct 2026, 4:24 PM`), button wrapping, font hierarchy, and confidence explanation.
-  - Unit tests for case save/reload.
-- [ ] **Part B**: Navigation & WOW UI:
-  - 9-tab Sidebar (Investigate, Cases, Agent Console, Knowledge Base, Threat Trends, Models & Data, Awareness Academy, Safety Center, Settings).
+- [x] **Part A**: Fix Case History & Vault:
+  - Database schema migration for raw inputs (`raw_url`, `raw_text`, `raw_sender`, `screenshot_name`) and `model_versions`.
+  - Updated `orchestrator.py` and `schemas.py` to persist `raw_input` and `model_versions`.
+  - Frontend: restored inputs on case click, sticky "Viewing saved case CS-XXXX" banner with Re-run / Close actions.
+  - Implemented deep-linking `/cases/CS-XXXX` and `?case=CS-XXXX`.
+  - Fixed timestamp formatting (`27 Oct 2026, 4:24 PM`), button wrapping, font hierarchy (`Inter`), and confidence explanation.
+  - Automated tests verifying case save & restore full fidelity (`test_case_save_and_restore_full_fidelity`).
+- [x] **Part B**: Navigation & WOW UI:
+  - 9-tab Sidebar (Investigate, Cases, Agent Console, Knowledge Base, Threat Trends, Models & Data, Awareness Academy, Safety Center, Settings, plus Batch Scan).
   - Mobile bottom tab bar with "More" drawer.
-  - Animated 8-agent interactive pipeline graph with side panel on node click.
-  - Command palette (`Ctrl+K`).
-- [ ] **Part C**: Six New Features:
-  1. Grounded RAG with real corpus, citation engine, and mini-evaluation report.
-  2. Investigator Agent with tool-calling and live timeline.
-  3. Models & Data dashboard with honest audit and stricter domain-split metrics.
-  4. Threat Trends dashboard from SQLite data.
-  5. Awareness Academy (Scam of the day + quiz + multilingual lessons).
-  6. Batch Scan (up to 20 items) + Case Compare + Share-Safe export.
-- [ ] **Step Final**: Automated test suites (pytest + vitest), production build, and updated documentation.
+  - Animated 8-agent interactive pipeline graph (`AgentWorkflowGraph.jsx`) with node illumination, live duration, engine badges, and click-to-inspect side panel.
+  - Command palette (`CommandPaletteModal.jsx`, `Ctrl+K`).
+- [x] **Part C**: Six New Features:
+  - [x] 1. Grounded RAG (`KnowledgeBasePage.jsx`): Real corpus in `backend/data/corpus/` (PECA 2016, PKCERT, SBP, NCCIA, Multilingual FAQs); citation generator; strict out-of-scope abstention; 20-question automated benchmark.
+  - [x] 2. Investigator Agent (`AgentConsolePage.jsx`): Gemini tool calling with 6 tools; max 8 steps cap; offline URL inspection; prompt-injection sanitization; human approval gate; case context follow-up chat.
+  - [x] 3. Models & Data (`ModelsDataPage.jsx`): 6 component cards reading from `/api/models/metrics`; honest disclosure of PhiUSIIL 100% random split leakage + domain-disjoint split benchmark (91.2% accuracy, 0.913 F1, 0.948 ROC-AUC); synthetic NLP training disclosure.
+  - [x] 4. Threat Trends (`ThreatTrendsPage.jsx`): Recharts dashboard computed directly from SQLite vault (risk distribution, timeline, modality, top rules, impersonated entities, date filter, empty state).
+  - [x] 5. Awareness Academy (`AwarenessAcademyPage.jsx`): Scam of the day spotlight; "Spot the scam" quiz challenge with forensic feedback; grounded multilingual lessons.
+  - [x] 6. Batch Scan & Case Compare (`BatchComparePage.jsx`): Scan up to 20 items concurrently; side-by-side comparison of 2 cases; Share-Safe export masking CNICs, phone numbers, and IBANs.
+- [x] **Step Final**: Automated test suites (pytest: 25/25, vitest: 14/14), production build (npm run build: 0 errors), and updated documentation.

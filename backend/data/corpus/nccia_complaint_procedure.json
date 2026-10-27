@@ -1,0 +1,29 @@
+{
+  "doc_id": "NCCIA_COMPLAINT_PROCEDURE",
+  "title": "National Cyber Crime Investigation Agency (NCCIA) Citizen Reporting Standard Operating Procedure",
+  "source_url": "https://complaint.nccia.gov.pk/",
+  "publisher": "National Cyber Crime Investigation Agency (NCCIA), Ministry of Interior, Pakistan",
+  "retrieval_date": "2026-10-27",
+  "language": "en",
+  "category": "Official Law Enforcement Procedure",
+  "sections": [
+    {
+      "section_number": "1",
+      "heading": "Jurisdiction and Individual Citizen Cybercrime Mandate",
+      "legal_text": "The National Cyber Crime Investigation Agency (NCCIA) is the dedicated national federal law enforcement agency constituted under the PECA statutory framework to investigate individual citizen complaints, cyber fraud, identity theft, financial scams, harassment, unauthorized account takeover, and electronic extortion across Pakistan.",
+      "summary": "Clarifies that NCCIA is the primary authority for individuals, while PKCERT coordinates organizational infrastructure."
+    },
+    {
+      "section_number": "2",
+      "heading": "Filing an Electronic Complaint (Online & Helpline)",
+      "legal_text": "Citizens may register complaints 24/7 through the official NCCIA online portal at https://complaint.nccia.gov.pk/ or by calling toll-free helpline 9999. Inquiries and initial triage can also be submitted via email to helpdesk@nccia.gov.pk.",
+      "summary": "Official contact channels for registering cybercrime cases in Pakistan."
+    },
+    {
+      "section_number": "3",
+      "heading": "Mandatory Evidence Preservation Checklist",
+      "legal_text": "Complainants must preserve and provide the following critical evidentiary artifacts: 1. Full uncropped screenshots showing the sender mobile number or caller ID. 2. Accurate date and time timestamps of received messages. 3. Bank account transaction reference numbers or Easypaisa/JazzCash transaction IDs (TID). 4. Complete unaltered text of SMS lures or links. 5. Call recording files if impersonation calls occurred. Altered, cropped, or deleted message threads weaken statutory admissibility.",
+      "summary": "Checklist of digital evidence required by NCCIA investigators to register an FIR."
+    }
+  ]
+}

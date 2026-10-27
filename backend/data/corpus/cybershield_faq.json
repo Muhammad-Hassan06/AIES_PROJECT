@@ -1,0 +1,41 @@
+{
+  "doc_id": "CYBERSHIELD_COMMUNITY_FAQ",
+  "title": "CyberShield Multilingual Safety FAQ (Citizen Guidance)",
+  "source_url": "https://cybershield.internal/faq",
+  "publisher": "CyberShield AI Project & Community Safety Taskforce",
+  "retrieval_date": "2026-10-27",
+  "language": "multilingual (en, ur, ro)",
+  "category": "CyberShield FAQ",
+  "sections": [
+    {
+      "section_number": "FAQ-01",
+      "heading": "Agar bank account block hone ka SMS aye to kya karein? (Roman Urdu)",
+      "legal_text": "CyberShield FAQ: Agar aap ko kisi personal number (jaise 0300, 0312 waghera) se message aye ke aap ka bank account ya debit card block ho raha hai, to foran yeh karein: 1. Kabhi bhi us SMS mein diye gaye link par click na karein. 2. Apna OTP ya 4-digit ATM PIN kisi ko mat dein. 3. Apne bank ke debit card ke peeche likhe official helpline number (UAN) par call karein aur tasdeeq karein. Asli bank hamesha 4-digit shortcode se SMS bhejte hain, aam mobile number se nahi.",
+      "summary": "Roman Urdu guidance on handling fake bank suspension SMS."
+    },
+    {
+      "section_number": "FAQ-02",
+      "heading": "اگر غلطی سے او ٹی پی (OTP) شیئر ہو جائے تو کیا کریں؟ (Urdu)",
+      "legal_text": "CyberShield FAQ: اگر آپ نے غلطی سے اپنا او ٹی پی (OTP) کسی جعلی نمائندے یا مشتبہ ویب سائٹ کو دے دیا ہے تو فوری طور پر یہ اقدامات کریں: 1۔ اپنے بینک کی ہیلپ لائن پر فوراً کال کر کے اپنے اکاؤنٹ اور ڈیجیٹل بینکنگ ایپ کو بلاک کروائیں۔ 2۔ ایزی پیسہ یا جاز کیش اکاؤنٹ کا پن کوڈ فوری تبدیل کریں۔ 3۔ اپنے قریبی تھانے یا این سی سی آئی اے (NCCIA) ہیلپ لائن 9999 پر فراڈ کی اطلاع دیں۔ یاد رکھیں کہ وقت بہت قیمتی ہے، جتنی جلدی اکاؤنٹ بلاک ہوگا اتنا ہی نقصان سے بچا جا سکے گا۔",
+      "summary": "Urdu emergency response steps if an OTP was accidentally compromised."
+    },
+    {
+      "section_number": "FAQ-03",
+      "heading": "BISP ya 8171 ka message asli hai ya fraud? (Roman Urdu)",
+      "legal_text": "CyberShield FAQ: Benazir Income Support Program (BISP) ki tamam sarkari maloomat aur raqam ki ittehla SIRF 8171 shortcode se aati hai. Agar aap ko kisi bhi aam 11-digit mobile number (jaise 03xx-xxxxxxx) se WhatsApp ya SMS aye ke 'Mubarik ho aap k 25,000 rupay aagaye hain' ya registration parchi mangi jaye, to woh 100% scam hai. BISP kabhi bhi advance processing fee ya card fee nahi mangta.",
+      "summary": "Verification guidelines for BISP / 8171 social security claims."
+    },
+    {
+      "section_number": "FAQ-04",
+      "heading": "What is the legal difference between NCCIA and PKCERT? (English)",
+      "legal_text": "CyberShield FAQ: In Pakistan's cybersecurity governance: 1. NCCIA (National Cyber Crime Investigation Agency) is the federal law enforcement agency that handles individual citizen complaints, cyber fraud, extortion, identity theft, and FIR registration (Helpline: 9999 / https://complaint.nccia.gov.pk/). 2. PKCERT (Pakistan Computer Emergency Response Team) is the national technical coordinator that monitors critical infrastructure, issues national threat advisories, and coordinates organizational cyber incident handling (https://pkcert.gov.pk/). CyberShield AI assists your investigation but never files complaints on your behalf.",
+      "summary": "Distinguishes legal roles of NCCIA vs PKCERT."
+    },
+    {
+      "section_number": "FAQ-05",
+      "heading": "What should I do if a caller claims they sent money by mistake? (English)",
+      "legal_text": "CyberShield FAQ: This is a well-known reversal scam. Scammers send a fake SMS screenshot or a fabricated transaction alert and then call in a panic asking you to 'send it back' via Easypaisa or JazzCash. Never send money back without opening your official banking app and verifying that the funds actually settled in your available balance. If money was genuinely misdirected, tell the caller to contact their bank to initiate official inter-bank reversal.",
+      "summary": "Protective protocol against fake accidental transfer refund lures."
+    }
+  ]
+}
