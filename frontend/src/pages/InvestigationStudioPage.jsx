@@ -1,72 +1,39 @@
 import React, { useState } from 'react';
 import { 
-  Search, FileText, Image as ImageIcon, Layers, 
-  Send, Sparkles, AlertTriangle, ShieldCheck, 
-  CheckCircle, ExternalLink, RefreshCw, Cpu, 
-  ChevronRight, ArrowRight, ShieldAlert, AlertOctagon
+  Search, FileText, Image as ImageIcon, Mail, 
+  Send, RefreshCw, Clipboard, AlertCircle, 
+  Layers, Scale, Cpu 
 } from 'lucide-react';
-import RiskBadge from '../components/RiskBadge';
-import AgentWorkflowGraph from '../components/AgentWorkflowGraph';
+import RiskVerdictCard from '../components/RiskVerdictCard';
+import CollapsibleSection from '../components/CollapsibleSection';
 import HighlightedMessageView from '../components/HighlightedMessageView';
+import EvidenceLedgerTable from '../components/EvidenceLedgerTable';
+import ActionPlanCard from '../components/ActionPlanCard';
+import ShareSafeSummaryModal from '../components/ShareSafeSummaryModal';
+import AgentStepper from '../components/AgentStepper';
+import DemoScenarioCards from '../components/DemoScenarioCards';
 import { createInvestigation } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 
-const SAMPLE_SCENARIOS = [
-  {
-    label: 'HBL Bank Smishing (OTP Theft)',
-    type: 'combined',
-    url: 'http://secure-login.hbl-verify.top/auth/session?token=88291',
-    text: 'URGENT: Your HBL Bank internet banking session has been suspended due to 3 failed attempts. Enter your 6-digit OTP code immediately at the link above to avoid permanent account freeze.',
-    sender: '+92-301-8891029',
-    indicators: ['otp_requested', 'urgency', 'password_requested']
-  },
-  {
-    label: 'BISP Social Support Lottery (Roman Urdu)',
-    type: 'message',
-    url: '',
-    text: 'BISP Alert: Mubarik ho! Aap k 25,000 rupay BISP Benazir Income Support Program mein aagaye hain. Foran call karein 0312-9988112 aur apna CNIC verify karwa k advance delivery fee 1,500 JazzCash bhejein.',
-    sender: '0312-9988112',
-    indicators: ['payment_requested']
-  },
-  {
-    label: 'Detained Parcel Customs Scam',
-    type: 'combined',
-    url: 'http://pakistan-post-tracking-fee.top/delivery/parcel',
-    text: 'Pakistan Post Notice: Your parcel #PK-9812 is held at Lahore Customs. Pay Rs. 850 customs duty within 12 hours to release for home delivery.',
-    sender: 'PakPost-Alert',
-    indicators: ['payment_requested', 'urgency']
-  },
-  {
-    label: 'Legitimate PKCERT Advisory Portal',
-    type: 'url',
-    url: 'https://pkcert.gov.pk/advisories',
-    text: 'Official PKCERT Incident Reporting and Security Advisories Portal',
-    sender: 'info@pkcert.gov.pk',
-    indicators: []
-  },
-  {
-    label: 'Cross-Modal Discrepancy (Safe URL + Fraud Text)',
-    type: 'combined',
-    url: 'https://en.wikipedia.org/wiki/Phishing',
-    text: 'FIA Cyber Crime Wing: An arrest warrant has been issued in your name for illegal transaction. Transfer Rs 35,000 penalty immediately or police will raid your address.',
-    sender: 'FIA-Officer',
-    indicators: ['urgency', 'payment_requested']
-  }
-];
+export default function InvestigationStudioPage({ currentReport, onReportGenerated }) {
+  const { t } = useLanguage();
+  const { addToast } = useToast();
 
-export default function InvestigationStudioPage({ currentReport, onReportGenerated, onNavigateToExplorer }) {
-  const [inputType, setInputType] = useState('combined');
+  const [activeTab, setActiveTab] = useState('url'); // 'url', 'message', 'screenshot', 'email'
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
   const [senderInfo, setSenderInfo] = useState('');
   const [screenshotBase64, setScreenshotBase64] = useState('');
   const [screenshotName, setScreenshotName] = useState('');
   const [manualIndicators, setManualIndicators] = useState([]);
+  
   const [isInvestigating, setIsInvestigating] = useState(false);
-  const [selectedAgentStep, setSelectedAgentStep] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isTechnicalMode, setIsTechnicalMode] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  const loadScenario = (sc) => {
-    setInputType(sc.type);
+  const handleSelectScenario = (sc) => {
     setUrl(sc.url || '');
     setText(sc.text || '');
     setSenderInfo(sc.sender || '');
@@ -74,6 +41,12 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
     setScreenshotBase64('');
     setScreenshotName('');
     setErrorMessage('');
+
+    if (sc.type === 'url') setActiveTab('url');
+    else if (sc.type === 'message') setActiveTab('message');
+    else setActiveTab('url'); // For combined, URL tab is highlighted with text ready
+
+    addToast(`Loaded scenario: ${sc.title}`, 'info');
   };
 
   const handleFileUpload = (e) => {
@@ -81,7 +54,7 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage('File exceeds 10MB upload limit');
+      setErrorMessage('File exceeds 10MB limit');
       return;
     }
 
@@ -93,20 +66,51 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
     reader.readAsDataURL(file);
   };
 
-  const toggleIndicator = (ind) => {
-    setManualIndicators(prev => 
-      prev.includes(ind) ? prev.filter(i => i !== ind) : [...prev, ind]
-    );
+  const handlePasteClipboard = async () => {
+    try {
+      const clipText = await navigator.clipboard.readText();
+      if (!clipText) {
+        addToast('Clipboard is empty', 'info');
+        return;
+      }
+      if (clipText.startsWith('http://') || clipText.startsWith('https://')) {
+        setUrl(clipText);
+        setActiveTab('url');
+      } else {
+        setText(clipText);
+        setActiveTab('message');
+      }
+      addToast('Pasted from clipboard', 'success');
+    } catch (err) {
+      console.warn('Clipboard read error:', err);
+      addToast('Unable to read clipboard', 'error');
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    
+    // Determine effective input_type based on active inputs
+    let calculatedType = 'combined';
+    if (activeTab === 'url' && !text && !screenshotBase64) {
+      calculatedType = 'url';
+    } else if ((activeTab === 'message' || activeTab === 'email') && !url && !screenshotBase64) {
+      calculatedType = 'message';
+    } else if (activeTab === 'screenshot' && !url && !text) {
+      calculatedType = 'screenshot';
+    }
+
+    if (!url.trim() && !text.trim() && !screenshotBase64) {
+      setErrorMessage('Please provide a URL, text message, or upload a screenshot to analyze.');
+      return;
+    }
+
     setIsInvestigating(true);
 
     try {
       const payload = {
-        input_type: inputType,
+        input_type: calculatedType,
         url: url.trim() || undefined,
         text: text.trim() || undefined,
         sender_info: senderInfo.trim() || undefined,
@@ -116,321 +120,379 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
 
       const report = await createInvestigation(payload);
       onReportGenerated(report);
-      if (report.agent_execution_trace && report.agent_execution_trace.length > 0) {
-        setSelectedAgentStep(report.agent_execution_trace[0]);
-      }
+      addToast('Investigation completed successfully', 'success');
     } catch (err) {
       setErrorMessage(err.message || 'Investigation execution failed');
+      addToast('Investigation failed', 'error');
     } finally {
       setIsInvestigating(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Scenario Presets Bar */}
-      <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
-        <div className="flex items-center space-x-2 text-xs text-slate-300">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span className="font-semibold text-slate-200">Load Test Case Scenario:</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {SAMPLE_SCENARIOS.map((sc, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => loadScenario(sc)}
-              className="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-cyan-500 transition-colors cursor-pointer"
-            >
-              {sc.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main 3-Column Studio Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* COLUMN 1: Evidence Intake Form (4 cols) */}
-        <div className="lg:col-span-4 rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="font-bold text-slate-100 text-sm tracking-wide uppercase">
-              1. Evidence Intake
-            </h3>
-            <span className="text-[11px] font-mono text-cyan-400">UNTRUSTED INPUT</span>
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* SECTION 1: Single Primary Action Intake Studio */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Investigate Cyber Threat
+            </h2>
+            <p className="text-xs text-slate-500">
+              Paste suspicious links, WhatsApp fraud messages, SMS, or screenshots for forensic analysis
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Modality Mode Selector */}
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                Investigation Type
-              </label>
-              <div className="grid grid-cols-4 gap-1 p-1 bg-slate-950 rounded-lg border border-slate-800">
-                {[
-                  { id: 'combined', label: 'Multi', icon: Layers },
-                  { id: 'url', label: 'URL', icon: Search },
-                  { id: 'message', label: 'Text', icon: FileText },
-                  { id: 'screenshot', label: 'Vision', icon: ImageIcon },
-                ].map(tab => {
-                  const Icon = tab.icon;
-                  const active = inputType === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setInputType(tab.id)}
-                      className={`flex items-center justify-center space-x-1 py-1.5 text-xs rounded-md font-medium transition-colors cursor-pointer ${
-                        active ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Quick Paste from Clipboard button */}
+          <button
+            type="button"
+            onClick={handlePasteClipboard}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer self-start sm:self-auto"
+            title="Paste from clipboard"
+          >
+            <Clipboard className="w-3.5 h-3.5 text-slate-500" />
+            <span>Paste from clipboard</span>
+          </button>
+        </div>
 
-            {/* Target URL Field */}
-            {(inputType === 'url' || inputType === 'combined') && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Suspicious URL / Web Destination
-                </label>
+        {/* Tab Modality Selection */}
+        <div className="flex border-b border-stone-200 space-x-2 rtl:space-x-reverse">
+          {[
+            { id: 'url', label: 'Website URL', icon: Search },
+            { id: 'message', label: 'SMS / Message', icon: FileText },
+            { id: 'screenshot', label: 'Screenshot Image', icon: ImageIcon },
+            { id: 'email', label: 'Email Phish', icon: Mail },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 px-3 text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  active
+                    ? 'border-b-2 border-teal-700 text-teal-800 font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Primary Input Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {activeTab === 'url' && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Suspicious Web Address (URL)
+              </label>
+              <div className="relative">
                 <input
                   type="text"
-                  placeholder="e.g. http://185.220.101.4/hbl-login.php"
+                  placeholder="https://example.com/hbl-login-verify.php"
                   value={url}
                   onChange={e => setUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 font-mono placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-teal-700 shadow-xs"
                 />
               </div>
-            )}
+              <p className="text-[11px] text-slate-400">
+                CyberShield AI safely parses URL structural signals without auto-opening or fetching malicious code.
+              </p>
+            </div>
+          )}
 
-            {/* Message / Email Text Field */}
-            {(inputType === 'message' || inputType === 'combined') && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+          {(activeTab === 'message' || activeTab === 'email') && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
                   Message, SMS, or Email Text
                 </label>
                 <textarea
                   rows={4}
-                  placeholder="Paste suspicious text (English, Urdu, or Roman Urdu)..."
+                  placeholder="Paste suspicious text (English, Urdu, or Roman Urdu)... e.g. BISP Alert: Aap k 25,000 rupay aagaye hain..."
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono resize-y"
+                  className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm font-sans text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-teal-700 shadow-xs resize-y"
                 />
               </div>
-            )}
 
-            {/* Sender / Caller ID */}
-            {(inputType === 'message' || inputType === 'combined') && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
                   Sender Phone / Header (Optional)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. +92-300-1234567 or FIA-Notice"
+                  placeholder="e.g. +92-301-8891029 or FIA-Notice"
                   value={senderInfo}
                   onChange={e => setSenderInfo(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-teal-700 shadow-xs"
                 />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Screenshot Upload Field */}
-            {(inputType === 'screenshot' || inputType === 'combined') && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Screenshot Image (PNG / JPG / WebP)
-                </label>
-                <div className="p-3 border-2 border-dashed border-slate-800 hover:border-slate-700 rounded-lg bg-slate-950/60 text-center">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="screenshot-file-input"
-                  />
-                  <label htmlFor="screenshot-file-input" className="cursor-pointer block text-xs text-slate-400">
-                    <ImageIcon className="w-5 h-5 mx-auto mb-1 text-slate-500" />
-                    {screenshotName ? (
-                      <span className="text-cyan-400 font-semibold">{screenshotName}</span>
-                    ) : (
-                      <span>Click to upload evidence screenshot</span>
-                    )}
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Manual Risk Indicators */}
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                Reported Warning Flags
+          {activeTab === 'screenshot' && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Evidence Screenshot (Image)
               </label>
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                {[
-                  { id: 'otp_requested', label: 'OTP / PIN Asked' },
-                  { id: 'urgency', label: 'Urgent Threat' },
-                  { id: 'payment_requested', label: 'Fee / Payment' },
-                  { id: 'password_requested', label: 'Password Asked' },
-                ].map(ind => (
-                  <label
-                    key={ind.id}
-                    className="flex items-center space-x-1.5 p-1.5 rounded bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={manualIndicators.includes(ind.id)}
-                      onChange={() => toggleIndicator(ind.id)}
-                      className="rounded bg-slate-800 border-slate-700 text-cyan-600 focus:ring-0"
-                    />
-                    <span>{ind.label}</span>
-                  </label>
-                ))}
+              <div className="p-6 border-2 border-dashed border-stone-200 hover:border-teal-600 rounded-xl bg-stone-50/70 text-center transition-colors">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="screenshot-file-input"
+                />
+                <label htmlFor="screenshot-file-input" className="cursor-pointer block text-xs text-slate-500">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                  {screenshotName ? (
+                    <span className="text-teal-800 font-bold block">{screenshotName}</span>
+                  ) : (
+                    <span>Click to select screenshot or drag & drop (PNG, JPG, WebP up to 10MB)</span>
+                  )}
+                </label>
               </div>
             </div>
+          )}
 
-            {errorMessage && (
-              <div className="p-2.5 rounded bg-red-950/60 border border-red-800 text-red-300 text-xs">
-                {errorMessage}
-              </div>
-            )}
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
+          {/* Primary CTA Button */}
+          <div className="flex items-center justify-end pt-2">
             <button
               type="submit"
               disabled={isInvestigating}
-              className="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-semibold text-xs tracking-wider uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all cursor-pointer"
+              className="px-6 py-3 rounded-xl bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white font-bold text-sm tracking-wide shadow-sm flex items-center space-x-2 transition-all cursor-pointer"
             >
               {isInvestigating ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Orchestrating 8-Agent Pipeline...</span>
+                  <span>{t('analyzing')}</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Execute AI Investigation</span>
+                  <Send className="w-4 h-4" />
+                  <span>{t('analyze_button')}</span>
                 </>
               )}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
+      </div>
 
-        {/* COLUMN 2: Orchestration Workflow & Timeline (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Workflow Graph Visualization */}
-          <AgentWorkflowGraph
-            trace={currentReport?.agent_execution_trace || []}
-            activeAgentId={selectedAgentStep?.agent_id}
-            onSelectAgent={setSelectedAgentStep}
+      {/* SECTION 2: Animated Agent Stepper (visible during and after analysis) */}
+      {(isInvestigating || currentReport) && (
+        <AgentStepper
+          isInvestigating={isInvestigating}
+          trace={currentReport?.agent_execution_trace || []}
+        />
+      )}
+
+      {/* SECTION 3: Results Display with Progressive Disclosure */}
+      {currentReport && !isInvestigating && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Top: Risk Verdict Card */}
+          <RiskVerdictCard
+            report={currentReport}
+            isTechnicalMode={isTechnicalMode}
+            onToggleTechnical={() => setIsTechnicalMode(!isTechnicalMode)}
+            onOpenShareSafe={() => setIsShareModalOpen(true)}
           />
 
-          {/* Results Summary and Risk Assessment Panel */}
-          {currentReport ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Executive Assessment Card */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <ShieldAlert className="w-5 h-5 text-cyan-400" />
-                    <h3 className="font-bold text-slate-100 text-sm uppercase">
-                      Forensic Assessment
-                    </h3>
-                  </div>
-                  <RiskBadge level={currentReport.risk_level} size="md" />
+          {/* Immediate Action Protocol Card */}
+          <ActionPlanCard report={currentReport} />
+
+          {/* Collapsible Deep-Dive Sections (Collapsed by default per Part 2) */}
+          <div className="space-y-3 pt-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+              Detailed Evidence & Forensics
+            </div>
+
+            {/* 1. Evidence Ledger */}
+            {currentReport.evidence_ledger && currentReport.evidence_ledger.length > 0 && (
+              <CollapsibleSection
+                id="evidence-ledger"
+                title={t('sec_why')}
+                icon={Layers}
+                badge={`${currentReport.evidence_ledger.length} findings`}
+                badgeType="primary"
+                defaultOpen={false}
+              >
+                <div className="pt-2">
+                  <EvidenceLedgerTable ledger={currentReport.evidence_ledger} />
                 </div>
+              </CollapsibleSection>
+            )}
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-slate-400">Model Confidence:</span>
-                    <span className="font-mono font-semibold text-cyan-400">
-                      {(currentReport.model_confidence * 100).toFixed(1)}%
-                    </span>
-                  </div>
+            {/* 2. Highlighted NLP Message Spans */}
+            {currentReport.nlp_result && (
+              <CollapsibleSection
+                id="highlighted-text"
+                title={t('sec_highlighted')}
+                icon={FileText}
+                badge={
+                  !isTechnicalMode
+                    ? undefined
+                    : `Score: ${(currentReport.nlp_result.risk_score * 100).toFixed(0)}%`
+                }
+                badgeType="warning"
+                defaultOpen={false}
+              >
+                <div className="pt-2 space-y-3">
+                  <HighlightedMessageView
+                    text={currentReport.nlp_result.analyzed_text}
+                    spans={currentReport.nlp_result.highlighted_spans}
+                  />
 
-                  <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-slate-400">Evidence Strength:</span>
-                    <span className="font-semibold text-slate-200">
-                      {currentReport.evidence_strength}
-                    </span>
-                  </div>
-
-                  <div className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
-                    <p className="font-medium text-slate-200 mb-1">Executive Summary:</p>
-                    {currentReport.executive_summary}
-                  </div>
-
-                  {/* Button to Full Explorer */}
-                  <button
-                    onClick={onNavigateToExplorer}
-                    className="w-full py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-800/50 flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
-                  >
-                    <span>Open Detailed Evidence Ledger ({currentReport.evidence_ledger?.length || 0})</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Immediate Security Action Plan */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <AlertOctagon className="w-5 h-5 text-amber-400" />
-                    <h3 className="font-bold text-slate-100 text-sm uppercase">
-                      Recommended Next Actions
-                    </h3>
-                  </div>
-                  <span className="text-[11px] font-mono text-amber-400">URGENT</span>
-                </div>
-
-                <ul className="space-y-2 text-xs text-slate-300">
-                  {currentReport.recommended_actions?.map((act, idx) => (
-                    <li key={idx} className="flex items-start space-x-2 p-2 rounded bg-slate-950/70 border border-slate-800/70">
-                      <span className="w-4 h-4 rounded-full bg-cyan-950 text-cyan-400 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">
-                        {idx + 1}
+                  {currentReport.nlp_result.pakistan_context_detected?.length > 0 && (
+                    <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+                      <span className="font-semibold text-slate-900 block mb-0.5">
+                        Local Pakistani Entities / Context Flagged:
                       </span>
-                      <span>{act}</span>
-                    </li>
-                  ))}
-                </ul>
+                      <span className="text-slate-600">
+                        {currentReport.nlp_result.pakistan_context_detected.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleSection>
+            )}
 
-                {/* Triggered Rules Quick Pills */}
-                {currentReport.triggered_rules && currentReport.triggered_rules.length > 0 && (
-                  <div className="pt-2 border-t border-slate-800">
-                    <span className="text-[11px] font-medium text-slate-400 block mb-1.5">
-                      Triggered Expert Rules ({currentReport.triggered_rules.length}):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentReport.triggered_rules.map(r => (
-                        <span
-                          key={r.rule_id}
-                          className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/50 text-amber-300 border border-amber-800/60"
-                          title={r.explanation}
-                        >
-                          {r.rule_id}: {r.rule_name}
-                        </span>
+            {/* 3. URL Security Analysis */}
+            {currentReport.url_result && (
+              <CollapsibleSection
+                id="url-analysis"
+                title={t('sec_url')}
+                icon={Search}
+                badge={currentReport.url_result.is_phishing ? 'Malicious' : 'Benign'}
+                badgeType={currentReport.url_result.is_phishing ? 'danger' : 'success'}
+                defaultOpen={false}
+              >
+                <div className="pt-2 space-y-4">
+                  <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs font-mono text-slate-800 break-all">
+                    {currentReport.url_result.url}
+                  </div>
+
+                  {isTechnicalMode && currentReport.url_result.features && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-slate-700 block">
+                        PhiUSIIL Schema Computed Features:
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                        {Object.entries(currentReport.url_result.features).map(([k, v]) => (
+                          <div key={k} className="p-2 bg-stone-50 rounded-lg border border-stone-200">
+                            <div className="text-[10px] text-slate-400 truncate">{k}</div>
+                            <div className="font-semibold text-slate-800">{String(v)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentReport.url_result.top_signals?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-700 block">
+                        Interpretable Diagnostic Signals:
+                      </span>
+                      {currentReport.url_result.top_signals.map((sig, i) => (
+                        <div key={i} className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-900">
+                          <strong className="mr-1">[{sig.severity}] {sig.feature}:</strong>
+                          <span>{sig.desc}</span>
+                        </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* 4. Screenshot Vision & OCR */}
+            {currentReport.vision_result?.extracted_text && (
+              <CollapsibleSection
+                id="screenshot-analysis"
+                title={t('sec_screenshot')}
+                icon={ImageIcon}
+                badge={currentReport.vision_result.ocr_engine}
+                badgeType="neutral"
+                defaultOpen={false}
+              >
+                <div className="pt-2 space-y-3">
+                  <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 text-xs font-mono text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {currentReport.vision_result.extracted_text}
                   </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="p-12 text-center border border-slate-800 rounded-xl bg-slate-900/40 text-slate-500 text-sm space-y-2">
-              <Cpu className="w-8 h-8 mx-auto text-slate-600 mb-2" />
-              <div className="font-semibold text-slate-400">Investigation Engine Ready</div>
-              <p className="max-w-md mx-auto text-xs text-slate-500">
-                Submit a URL, message, or screenshot on the left panel, or select a pre-loaded test case to observe the 8-agent AI investigation pipeline in action.
-              </p>
-            </div>
-          )}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* 5. Rules Triggered */}
+            {currentReport.triggered_rules && currentReport.triggered_rules.length > 0 && (
+              <CollapsibleSection
+                id="rules-triggered"
+                title={t('sec_rules')}
+                icon={Scale}
+                badge={`${currentReport.triggered_rules.length} matched`}
+                badgeType="warning"
+                defaultOpen={false}
+              >
+                <div className="pt-2 space-y-3">
+                  {currentReport.triggered_rules.map((rule) => (
+                    <div key={rule.rule_id} className="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">
+                          {isTechnicalMode ? `${rule.rule_id}: ` : ''}{rule.rule_name}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-800 border border-red-200 font-mono">
+                          {rule.severity}
+                        </span>
+                      </div>
+                      <p className="text-slate-600">{rule.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* 6. Technical Report */}
+            {isTechnicalMode && currentReport.technical_report && (
+              <CollapsibleSection
+                id="technical-report"
+                title={t('sec_technical')}
+                icon={Cpu}
+                badge="Raw Forensic Log"
+                badgeType="neutral"
+                defaultOpen={false}
+              >
+                <div className="pt-2">
+                  <div className="p-4 rounded-xl bg-stone-900 text-stone-100 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-80 overflow-y-auto">
+                    {currentReport.technical_report}
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* SECTION 4: One-Click Demo Scenarios (Friendly cards) */}
+      <DemoScenarioCards onSelectScenario={handleSelectScenario} />
+
+      {/* Share-Safe Summary Modal */}
+      <ShareSafeSummaryModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        report={currentReport}
+      />
     </div>
   );
 }

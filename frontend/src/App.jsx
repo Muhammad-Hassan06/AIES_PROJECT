@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import OverviewPage from './pages/OverviewPage';
+import StartupAnimation from './components/StartupAnimation';
 import InvestigationStudioPage from './pages/InvestigationStudioPage';
-import EvidenceExplorerPage from './pages/EvidenceExplorerPage';
-import ModelIntelligencePage from './pages/ModelIntelligencePage';
-import ExpertRulesPage from './pages/ExpertRulesPage';
-import PakistanSafetyPage from './pages/PakistanSafetyPage';
-import ReportsPage from './pages/ReportsPage';
+import CasesPage from './pages/CasesPage';
+import InsightsPage from './pages/InsightsPage';
+import SafetyCenterPage from './pages/SafetyCenterPage';
 import SettingsPage from './pages/SettingsPage';
+import { LanguageProvider } from './context/LanguageContext';
+import { ToastProvider } from './context/ToastContext';
 import { getInvestigation, listInvestigations, getHealthStatus } from './services/api';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+function AppContent() {
+  const [activeTab, setActiveTab] = useState('investigate');
   const [currentReport, setCurrentReport] = useState(null);
   const [healthStatus, setHealthStatus] = useState(null);
 
@@ -35,23 +35,21 @@ export default function App() {
     init();
   }, []);
 
-  const handleOpenCase = async (caseId) => {
-    try {
-      const rep = await getInvestigation(caseId);
-      setCurrentReport(rep);
-      setActiveTab('evidence');
-    } catch (e) {
-      console.error(e);
-    }
+  const handleOpenCase = (report) => {
+    setCurrentReport(report);
+    setActiveTab('investigate');
   };
 
   const handleNewInvestigation = () => {
-    setActiveTab('studio');
+    setActiveTab('investigate');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* Top Application Bar */}
+    <div className="min-h-screen bg-stone-50 text-slate-900 flex flex-col font-sans">
+      {/* 1.5s Skippable Startup Animation */}
+      <StartupAnimation />
+
+      {/* Top Application Bar with Language Selector */}
       <Navbar
         currentCaseId={currentReport?.case_id}
         onNewInvestigation={handleNewInvestigation}
@@ -60,53 +58,34 @@ export default function App() {
 
       {/* Main Studio Workspace */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Collapsible Left Navigation */}
+        {/* Navigation Sidebar (Desktop) + Mobile Bottom Tab Bar */}
         <Sidebar
           activeTab={activeTab}
           onSelectTab={setActiveTab}
         />
 
         {/* Dynamic Main Workspace Content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-950/40">
-          <div className="max-w-7xl mx-auto">
-            {activeTab === 'overview' && (
-              <OverviewPage
-                onOpenCase={handleOpenCase}
-                onNewInvestigation={handleNewInvestigation}
-              />
-            )}
-
-            {activeTab === 'studio' && (
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+          <div className="max-w-6xl mx-auto">
+            {activeTab === 'investigate' && (
               <InvestigationStudioPage
                 currentReport={currentReport}
                 onReportGenerated={(rep) => setCurrentReport(rep)}
-                onNavigateToExplorer={() => setActiveTab('evidence')}
               />
             )}
 
-            {activeTab === 'evidence' && (
-              <EvidenceExplorerPage
-                currentReport={currentReport}
+            {activeTab === 'cases' && (
+              <CasesPage
+                onSelectCase={handleOpenCase}
               />
             )}
 
-            {activeTab === 'models' && (
-              <ModelIntelligencePage />
+            {activeTab === 'insights' && (
+              <InsightsPage />
             )}
 
-            {activeTab === 'rules' && (
-              <ExpertRulesPage />
-            )}
-
-            {activeTab === 'pakistan' && (
-              <PakistanSafetyPage />
-            )}
-
-            {activeTab === 'reports' && (
-              <ReportsPage
-                currentReport={currentReport}
-                onSelectCase={(rep) => setCurrentReport(rep)}
-              />
+            {activeTab === 'safety' && (
+              <SafetyCenterPage />
             )}
 
             {activeTab === 'settings' && (
@@ -116,5 +95,15 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </LanguageProvider>
   );
 }

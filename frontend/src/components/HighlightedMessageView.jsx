@@ -1,22 +1,63 @@
 import React, { useState } from 'react';
-import { AlertCircle, Tag, Info } from 'lucide-react';
+import { Tag, Info, AlertTriangle } from 'lucide-react';
 
-const CATEGORY_COLORS = {
-  'Credential Harvesting': 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30',
-  'Urgency & Pressure': 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30',
-  'Legal & Intimidation Threat': 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30',
-  'Financial / Fee Request': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40 hover:bg-yellow-500/30',
-  'Prize & Lottery Lure': 'bg-purple-500/20 text-purple-300 border-purple-500/40 hover:bg-purple-500/30',
-  'Institutional Impersonation': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30',
-  'Roman Urdu Fraud Cue': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30',
-  'Verification Bypass': 'bg-orange-500/20 text-orange-300 border-orange-500/40 hover:bg-orange-500/30',
+const CATEGORY_STYLES = {
+  'Credential Harvesting': {
+    underline: 'border-b-2 border-red-500 bg-red-50 text-red-950 font-medium',
+    pill: 'bg-red-50 text-red-800 border-red-200',
+    dot: 'bg-red-500',
+    desc: 'Requests passwords, PINs, or 2FA OTP codes'
+  },
+  'Urgency & Pressure': {
+    underline: 'border-b-2 border-amber-500 bg-amber-50 text-amber-950 font-medium',
+    pill: 'bg-amber-50 text-amber-800 border-amber-200',
+    dot: 'bg-amber-500',
+    desc: 'Artificial time limits creating panic'
+  },
+  'Legal & Intimidation Threat': {
+    underline: 'border-b-2 border-rose-600 bg-rose-50 text-rose-950 font-medium',
+    pill: 'bg-rose-50 text-rose-800 border-rose-200',
+    dot: 'bg-rose-600',
+    desc: 'Fake arrest warrants or police threats'
+  },
+  'Financial / Fee Request': {
+    underline: 'border-b-2 border-orange-500 bg-orange-50 text-orange-950 font-medium',
+    pill: 'bg-orange-50 text-orange-800 border-orange-200',
+    dot: 'bg-orange-500',
+    desc: 'Solicits advance processing fees or wallet transfers'
+  },
+  'Prize & Lottery Lure': {
+    underline: 'border-b-2 border-purple-500 bg-purple-50 text-purple-950 font-medium',
+    pill: 'bg-purple-50 text-purple-800 border-purple-200',
+    dot: 'bg-purple-500',
+    desc: 'Unsolicited cash grant or lottery claims'
+  },
+  'Institutional Impersonation': {
+    underline: 'border-b-2 border-teal-600 bg-teal-50 text-teal-950 font-medium',
+    pill: 'bg-teal-50 text-teal-800 border-teal-200',
+    dot: 'bg-teal-600',
+    desc: 'Posing as banks, BISP, Pakistan Post, or FIA'
+  },
+  'Roman Urdu Fraud Cue': {
+    underline: 'border-b-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-medium',
+    pill: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    dot: 'bg-emerald-600',
+    desc: 'Colloquial Pakistani phishing patterns'
+  },
+  'Verification Bypass': {
+    underline: 'border-b-2 border-amber-600 bg-amber-50 text-amber-950 font-medium',
+    pill: 'bg-amber-50 text-amber-800 border-amber-200',
+    dot: 'bg-amber-600',
+    desc: 'Attempts to redirect away from official apps'
+  },
 };
 
 export default function HighlightedMessageView({ text = '', spans = [] }) {
+  const [hoveredSpan, setHoveredSpan] = useState(null);
   const [activeSpan, setActiveSpan] = useState(null);
 
   if (!text) {
-    return <div className="text-slate-500 text-sm italic">No message text submitted.</div>;
+    return <div className="text-slate-400 text-xs italic">No message text submitted for this case.</div>;
   }
 
   // Sort spans ascending by start index
@@ -26,7 +67,7 @@ export default function HighlightedMessageView({ text = '', spans = [] }) {
   let currentIndex = 0;
 
   sortedSpans.forEach((span, idx) => {
-    // Text before the span
+    // Normal text before this span
     if (span.start > currentIndex) {
       elements.push(
         <span key={`text-${currentIndex}`}>
@@ -35,14 +76,25 @@ export default function HighlightedMessageView({ text = '', spans = [] }) {
       );
     }
 
-    const colorClass = CATEGORY_COLORS[span.category] || 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+    const conf = CATEGORY_STYLES[span.category] || {
+      underline: 'border-b-2 border-teal-500 bg-teal-50 text-teal-950',
+      pill: 'bg-stone-100 text-slate-700 border-stone-200',
+      dot: 'bg-teal-500',
+      desc: 'Suspicious linguistic pattern'
+    };
 
     elements.push(
       <span
         key={`span-${idx}`}
+        tabIndex={0}
+        onMouseEnter={() => setHoveredSpan(span)}
+        onMouseLeave={() => setHoveredSpan(null)}
         onClick={() => setActiveSpan(span)}
-        className={`inline-block px-1.5 py-0.5 mx-0.5 rounded border text-xs font-medium cursor-pointer transition-colors ${colorClass}`}
-        title={`${span.category}: ${span.explanation}`}
+        onFocus={() => setHoveredSpan(span)}
+        onBlur={() => setHoveredSpan(null)}
+        className={`inline-block px-1 py-0.5 mx-0.5 rounded cursor-pointer transition-all ${conf.underline}`}
+        aria-label={`${span.category}: ${span.explanation}`}
+        role="button"
       >
         {text.substring(span.start, span.end)}
       </span>
@@ -60,33 +112,56 @@ export default function HighlightedMessageView({ text = '', spans = [] }) {
     );
   }
 
+  const selectedOrHovered = hoveredSpan || activeSpan;
+
+  // Unique categories present in this message for dynamic legend
+  const presentCategories = Array.from(new Set(spans.map(s => s.category)));
+
   return (
-    <div className="space-y-3">
-      <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-200 text-sm font-mono leading-relaxed select-text">
+    <div className="space-y-4">
+      {/* Category Legend */}
+      <div className="flex flex-wrap items-center gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mr-1">
+          Threat Legend:
+        </span>
+        {Object.entries(CATEGORY_STYLES).map(([cat, conf]) => (
+          <div
+            key={cat}
+            className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full border text-[10px] font-medium ${conf.pill} ${
+              presentCategories.includes(cat) ? 'ring-1 ring-stone-300 font-semibold' : 'opacity-70'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${conf.dot}`} />
+            <span>{cat}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Message Text with Underlined Highlights */}
+      <div className="p-4 rounded-xl bg-white border border-stone-200 text-slate-900 text-sm font-sans leading-relaxed select-text shadow-xs">
         {elements}
       </div>
 
-      {activeSpan ? (
-        <div className="p-3 rounded-lg bg-slate-900 border border-cyan-800/60 shadow-md">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="flex items-center text-xs font-semibold text-cyan-400">
-              <Tag className="w-3.5 h-3.5 mr-1" /> {activeSpan.category}
+      {/* Hover / Active Explanation Tooltip Card */}
+      {selectedOrHovered ? (
+        <div className="p-3.5 rounded-xl bg-teal-50/80 border border-teal-200 shadow-xs animate-fade-in space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center font-bold text-teal-900">
+              <Tag className="w-3.5 h-3.5 mr-1 text-teal-700" />
+              {selectedOrHovered.category}
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
-              Offset [{activeSpan.start}:{activeSpan.end}]
+              Token: "{selectedOrHovered.text}"
             </span>
           </div>
-          <div className="text-xs text-slate-300 mb-1">
-            Flagged Token: <span className="text-amber-300 font-mono font-semibold">"{activeSpan.text}"</span>
-          </div>
-          <p className="text-xs text-slate-400 leading-normal">
-            {activeSpan.explanation}
+          <p className="text-xs text-slate-700 leading-normal">
+            {selectedOrHovered.explanation}
           </p>
         </div>
       ) : spans.length > 0 ? (
-        <div className="flex items-center text-xs text-slate-500 italic">
-          <Info className="w-3.5 h-3.5 mr-1 text-slate-400" />
-          Click on any highlighted token above to inspect the diagnostic explanation.
+        <div className="flex items-center text-xs text-slate-500">
+          <Info className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+          <span>Hover or tap on any underlined token to view the threat explanation.</span>
         </div>
       ) : null}
     </div>

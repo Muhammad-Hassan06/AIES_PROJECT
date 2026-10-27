@@ -1,30 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings, ShieldCheck, Database, Key, 
-  Trash2, Cpu, CheckCircle2, AlertTriangle, RefreshCw 
+  Settings, Database, Trash2, Globe, Sliders, ShieldCheck 
 } from 'lucide-react';
 import { getHealthStatus, listInvestigations, deleteInvestigation } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 
 export default function SettingsPage() {
+  const { language, setLanguage, t } = useLanguage();
+  const { addToast } = useToast();
+
   const [health, setHealth] = useState(null);
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
-  const [message, setMessage] = useState('');
+  const [totalCases, setTotalCases] = useState(0);
+  const [isPurging, setIsPurging] = useState(false);
+  const [defaultViewMode, setDefaultViewMode] = useState(() => {
+    return localStorage.getItem('cybershield_default_view') || 'simple';
+  });
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [hData, cData] = await Promise.all([
+      const [h, cases] = await Promise.all([
         getHealthStatus().catch(() => null),
-        listInvestigations(50).catch(() => [])
+        listInvestigations(200).catch(() => [])
       ]);
-      setHealth(hData);
-      setCases(cData);
+      setHealth(h);
+      setTotalCases(cases.length);
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -32,171 +34,203 @@ export default function SettingsPage() {
     loadData();
   }, []);
 
-  const handleDeleteCase = async (caseId) => {
-    if (!window.confirm(`Are you sure you want to permanently delete case ${caseId}?`)) return;
-    setDeletingId(caseId);
+  const handleToggleDefaultView = (mode) => {
+    setDefaultViewMode(mode);
+    localStorage.setItem('cybershield_default_view', mode);
+    addToast(`Default view mode set to ${mode === 'technical' ? 'Technical' : 'Simple'}`, 'info');
+  };
+
+  const handlePurgeAllCases = async () => {
+    const confirmed = window.confirm(t('purge_confirm'));
+    if (!confirmed) return;
+
+    setIsPurging(true);
     try {
-      await deleteInvestigation(caseId);
-      setMessage(`Case ${caseId} deleted successfully.`);
+      // Fetch all cases and delete them
+      const cases = await listInvestigations(500);
+      let count = 0;
+      for (const c of cases) {
+        try {
+          await deleteInvestigation(c.case_id);
+          count++;
+        } catch (e) {
+          console.warn(`Failed to delete ${c.case_id}:`, e);
+        }
+      }
+      setTotalCases(0);
+      addToast(`Successfully purged ${count} cases from the local vault`, 'success');
       loadData();
-    } catch (e) {
-      setMessage(`Delete failed: ${e.message}`);
+    } catch (err) {
+      addToast(`Purge failed: ${err.message}`, 'error');
     } finally {
-      setDeletingId(null);
+      setIsPurging(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-2">
-        <div className="flex items-center space-x-2">
-          <Settings className="w-5 h-5 text-cyan-400" />
-          <span className="text-xs font-mono font-semibold text-cyan-400 uppercase tracking-wider">
-            System Administration & Security Controls
-          </span>
+      <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-2">
+        <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+          <div className="p-2 rounded-xl bg-teal-50 text-teal-800 border border-teal-100">
+            <Settings className="w-5 h-5 text-teal-700" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              Settings & Privacy Preferences
+            </h2>
+            <p className="text-xs text-slate-500">
+              Manage data retention, local case vault purge, default view detail, and language
+            </p>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">
-          System Configuration & Data Retention
-        </h2>
-        <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-          Manage system security postures, AI provider bindings, local SQLite evidence retention,
-          and forensic diagnostic logs.
-        </p>
       </div>
 
-      {message && (
-        <div className="p-3 rounded-lg bg-cyan-950/40 border border-cyan-800 text-cyan-300 text-xs">
-          {message}
-        </div>
-      )}
-
-      {/* Security & AI Provider Status */}
+      {/* Settings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Generative AI Provider Binding */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 shadow-md">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center space-x-2">
-              <Key className="w-4 h-4 text-cyan-400" />
-              <h3 className="font-semibold text-slate-200 text-sm">
-                Generative AI Provider Status
-              </h3>
-            </div>
-            <span className={`text-xs px-2 py-0.5 rounded font-mono ${
-              health?.gemini_api_configured ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'
-            }`}>
-              {health?.gemini_api_configured ? 'API Connected' : 'Deterministic Fallback Active'}
-            </span>
+        {/* Language Selection */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-4">
+          <div className="flex items-center space-x-2 text-slate-900">
+            <Globe className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm">Language & Script (زبان)</h3>
           </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed">
-            CyberShield AI abstracts Generative AI providers through an isolated backend service.
-            When an API key is absent or offline, high-fidelity deterministic template synthesis guarantees
-            zero service interruption without inventing hallucinations.
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Select your preferred interface language. Urdu activates full Right-to-Left (RTL) alignment and Nastaliq typography.
           </p>
 
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-slate-300">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Provider:</span>
-              <span>Google Gemini API</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Target Model:</span>
-              <span className="text-cyan-400">gemini-2.5-flash</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Key Exposure:</span>
-              <span className="text-emerald-400">Environment Protected (Hidden)</span>
-            </div>
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            {[
+              { code: 'en', label: 'English', desc: 'Standard LTR' },
+              { code: 'ur', label: 'اردو', desc: 'Full RTL Naskh' },
+              { code: 'ro', label: 'Roman Urdu', desc: 'Latin script' }
+            ].map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => setLanguage(lang.code)}
+                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                  language === lang.code
+                    ? 'border-teal-700 bg-teal-50 text-teal-900 font-bold shadow-xs'
+                    : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-slate-700'
+                }`}
+              >
+                <div className="text-xs font-semibold">{lang.label}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{lang.desc}</div>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Local ML & Defense Subsystems */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 shadow-md">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <h3 className="font-semibold text-slate-200 text-sm">
-                Security Defense & Model Health
-              </h3>
-            </div>
-            <span className="text-xs text-emerald-400 font-mono flex items-center">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> All Subsystems Online
-            </span>
+        {/* Default View Mode */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-4">
+          <div className="flex items-center space-x-2 text-slate-900">
+            <Sliders className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm">Default Analysis Detail View</h3>
           </div>
 
-          <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between items-center p-2.5 rounded bg-slate-950 border border-slate-800">
-              <span className="text-slate-300">URL Threat Classifier (RF):</span>
-              <span className="text-emerald-400 font-bold">LOADED & ACTIVE</span>
-            </div>
-            <div className="flex justify-between items-center p-2.5 rounded bg-slate-950 border border-slate-800">
-              <span className="text-slate-300">NLP Social Engineering Model:</span>
-              <span className="text-emerald-400 font-bold">LOADED & ACTIVE</span>
-            </div>
-            <div className="flex justify-between items-center p-2.5 rounded bg-slate-950 border border-slate-800">
-              <span className="text-slate-300">SSRF Network Protection:</span>
-              <span className="text-cyan-400 font-bold">ENFORCED (RFC1918 Blocked)</span>
-            </div>
-            <div className="flex justify-between items-center p-2.5 rounded bg-slate-950 border border-slate-800">
-              <span className="text-slate-300">Evidence Vault Database:</span>
-              <span className="text-slate-200">SQLite (backend/data/cybershield.db)</span>
-            </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Choose whether the investigation results open in Citizen Simple mode (plain language) or Technical mode (model features, confidence scores, and rule citations).
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => handleToggleDefaultView('simple')}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                defaultViewMode === 'simple'
+                  ? 'border-teal-700 bg-teal-50 text-teal-900 font-bold shadow-xs'
+                  : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-slate-700'
+              }`}
+            >
+              <div className="text-xs font-semibold">Simple (Default)</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Plain language verdicts & immediate action steps</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleToggleDefaultView('technical')}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                defaultViewMode === 'technical'
+                  ? 'border-teal-700 bg-teal-50 text-teal-900 font-bold shadow-xs'
+                  : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-slate-700'
+              }`}
+            >
+              <div className="text-xs font-semibold">Technical View</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Expanded model features, confidences, & raw logs</div>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Case Vault Data Retention & Deletion */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 shadow-md">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center space-x-2">
-            <Database className="w-4 h-4 text-cyan-400" />
-            <h3 className="font-semibold text-slate-200 text-sm">
-              Evidence Retention & Case Deletion Controls ({cases.length} Records)
+      {/* Case Vault & Data Retention Controls */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+            <Database className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-slate-900 text-sm">
+              Local Vault & Privacy Retention
             </h3>
           </div>
-          <span className="text-xs text-slate-400">Privacy & Compliance</span>
+          <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-stone-100 text-slate-700 border border-stone-200">
+            {totalCases} Cases Stored
+          </span>
         </div>
 
-        <p className="text-xs text-slate-400 leading-relaxed">
-          In compliance with privacy best practices, users and analysts can permanently purge individual forensic cases
-          and associated evidence artifacts from local database storage.
-        </p>
+        <div className="text-xs text-slate-600 space-y-2 leading-relaxed">
+          <p>
+            <strong>Storage Location:</strong> All case records and forensic extraction artifacts reside locally in the SQLite database (<code>backend/data/cybershield.db</code>).
+          </p>
+          <p>
+            CyberShield AI never uploads your submitted messages, links, or screenshots to public clouds or third-party servers. 
+            In compliance with user data privacy guidelines, you can permanently erase all stored cases at any time.
+          </p>
+        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
-              <tr>
-                <th className="py-2.5 px-3">Case ID</th>
-                <th className="py-2.5 px-3">Timestamp</th>
-                <th className="py-2.5 px-3">Input Type</th>
-                <th className="py-2.5 px-3">Risk Assessment</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 font-mono text-[11px]">
-              {cases.map((c) => (
-                <tr key={c.case_id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-2.5 px-3 text-cyan-400 font-bold">{c.case_id}</td>
-                  <td className="py-2.5 px-3 text-slate-400">{c.timestamp}</td>
-                  <td className="py-2.5 px-3 text-slate-300 capitalize">{c.input_type}</td>
-                  <td className="py-2.5 px-3">
-                    <span className="text-slate-200 font-semibold">{c.risk_level}</span>
-                  </td>
-                  <td className="py-2.5 px-3 text-right">
-                    <button
-                      onClick={() => handleDeleteCase(c.case_id)}
-                      disabled={deletingId === c.case_id}
-                      className="px-2.5 py-1 rounded bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 text-xs transition-colors cursor-pointer"
-                    >
-                      {deletingId === c.case_id ? 'Purging...' : 'Delete Case'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="pt-2 flex items-center justify-between">
+          <span className="text-xs text-slate-500">
+            Irreversible action. Deletes all past investigations.
+          </span>
+
+          <button
+            type="button"
+            onClick={handlePurgeAllCases}
+            disabled={isPurging || totalCases === 0}
+            className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs flex items-center space-x-1.5 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{isPurging ? 'Purging...' : t('purge_all_cases')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* System Status Indicators */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-3">
+        <div className="flex items-center space-x-2 text-slate-900 font-bold text-xs uppercase tracking-wider">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>System Subsystem Status</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex justify-between items-center">
+            <span className="text-slate-600">URL Threat Classifier:</span>
+            <span className="text-emerald-700 font-bold">ONLINE (15 features)</span>
+          </div>
+          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex justify-between items-center">
+            <span className="text-slate-600">NLP Social Engineering:</span>
+            <span className="text-emerald-700 font-bold">ONLINE (TF-IDF + MNB)</span>
+          </div>
+          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex justify-between items-center">
+            <span className="text-slate-600">SSRF Protection Engine:</span>
+            <span className="text-teal-800 font-bold">ENFORCED (RFC1918 safe)</span>
+          </div>
+          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex justify-between items-center">
+            <span className="text-slate-600">Generative AI Provider:</span>
+            <span className="text-slate-800 font-semibold">
+              {health?.gemini_api_configured ? 'Google Gemini API' : 'Deterministic Fallback'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
