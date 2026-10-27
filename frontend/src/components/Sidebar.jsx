@@ -43,8 +43,8 @@ export default function Sidebar({ activeTab, onSelectTab }) {
 
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            const label = t(item.labelKey) || item.defaultLabel;
+            const translated = t(item.labelKey);
+            const label = (translated && translated !== item.labelKey) ? translated : item.defaultLabel;
 
             return (
               <button
@@ -148,7 +148,8 @@ export default function Sidebar({ activeTab, onSelectTab }) {
               {extraMobileTabs.map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
-                const label = t(item.labelKey) || item.defaultLabel;
+                const translated = t(item.labelKey);
+                const label = (translated && translated !== item.labelKey) ? translated : item.defaultLabel;
 
                 return (
                   <button

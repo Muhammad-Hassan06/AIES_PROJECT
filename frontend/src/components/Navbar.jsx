@@ -63,8 +63,10 @@ export default function Navbar({ currentCaseId, onNewInvestigation, healthStatus
 
         {/* Engine Status Dot */}
         <div className="hidden lg:flex items-center space-x-2 text-xs text-slate-600">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>{t('engine_active')}</span>
+          <span className={`w-2 h-2 rounded-full ${healthStatus?.status === 'healthy' ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
+          <span className={healthStatus?.status === 'healthy' ? 'text-slate-600' : 'text-red-700 font-medium'}>
+            {healthStatus?.status === 'healthy' ? t('engine_active') : 'Backend Offline'}
+          </span>
         </div>
 
         {/* Language Selector Dropdown */}
