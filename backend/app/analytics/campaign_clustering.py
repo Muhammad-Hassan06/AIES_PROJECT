@@ -36,7 +36,7 @@ class ScamCampaignClusteringEngine:
             SELECT case_id, timestamp, risk_level, raw_sender, raw_text, raw_url, summary
             FROM investigations
             ORDER BY timestamp DESC
-            LIMIT 100
+            LIMIT 500
         """)
         rows = cursor.fetchall()
         conn.close()

@@ -33,13 +33,13 @@ SPAN_PATTERNS = [
     },
     {
         "category": "Prize & Lottery Lure",
-        "pattern": r"\b(won rs\.? ?\d+|prize of rs|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant)\b",
-        "explanation": "Unsolicited large cash rewards or lottery wins entice victims into fraudulent fee payment or credential sharing."
+        "pattern": r"\b(won rs\.? ?\d+|prize of rs|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey)\b",
+        "explanation": "Unsolicited cash rewards, survey freebies, or lottery wins entice victims into fraudulent fee payment or credential sharing."
     },
     {
         "category": "Institutional Impersonation",
-        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|nadra|fbr|pakistan post|tcs courier|jazzcash|easypaisa)\b",
-        "explanation": "Invoking reputable institutions or Pakistani public programs gives false credibility to the communication."
+        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|nadra|fbr|pakistan post|tcs courier|jazzcash|easypaisa|amazon|microsoft|apple|google|netflix|paypal)\b",
+        "explanation": "Invoking reputable brands, institutions, or public programs gives false credibility to the communication."
     },
     {
         "category": "Verification Bypass",

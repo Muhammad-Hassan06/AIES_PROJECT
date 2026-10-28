@@ -185,8 +185,8 @@ def test_scam_campaign_clustering_detects_repeat_senders():
     seed_sample_spam_cases()
     campaigns = campaign_clustering_engine.detect_campaigns()
     assert len(campaigns) > 0
-    # At least one campaign should center around 03001234567
-    sender_camps = [c for c in campaigns if any("03001234567" in ind for ind in c["shared_indicators"])]
+    # At least one campaign should center around 03001234567 / +923001234567
+    sender_camps = [c for c in campaigns if any("1234567" in ind for ind in c["shared_indicators"])]
     assert len(sender_camps) >= 1
     camp = sender_camps[0]
     assert camp["incident_count"] >= 2
@@ -227,3 +227,70 @@ def test_agent_orchestration_real_execution():
     assert any("Risk Assessment" in n for n in step_names)
     assert any("Report Generation" in n for n in step_names)
     assert rep.status == "COMPLETED"
+
+# ==============================================================================
+# 7. Screenshot Analysis & Risk Calibration Tests (Benign vs Malicious)
+# ==============================================================================
+
+def test_ocr_engine_does_not_hallucinate_fake_login_on_clean_image():
+    """OCR engine must never fabricate fake login keywords or layout cues on a clean image."""
+    from app.vision.ocr_engine import ocr_engine
+    from PIL import Image, ImageDraw
+    import io, base64
+
+    # Create a small clean green chat bubble image in memory
+    img = Image.new("RGB", (200, 60), color=(37, 211, 102))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    res = ocr_engine.process_screenshot_base64(b64_str)
+    assert "login" not in res["extracted_text"].lower()
+    assert "credential" not in res["extracted_text"].lower()
+    assert len(res["detected_keywords"]) == 0
+    assert len(res["detected_brands"]) if "detected_brands" in res else True
+
+def test_benign_chat_message_screenshot_evaluates_to_low_risk():
+    """Benign casual message screenshot ('Dinner after work') must evaluate to LOW risk, never CRITICAL."""
+    from PIL import Image, ImageDraw
+    import io, base64
+
+    # Render a clear image containing 'Let's meet up for dinner after work!'
+    img = Image.new("RGB", (320, 80), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 30), "Let's meet up for dinner after work!", fill=(0, 0, 0))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    rep = orchestrator.run_investigation(
+        input_type=InvestigationType.SCREENSHOT,
+        screenshot_base64=b64_str
+    )
+    assert rep.risk_level == RiskLevel.LOW
+    assert rep.model_confidence >= 0.85
+    assert not any(r.severity in ("HIGH", "CRITICAL") for r in rep.triggered_rules)
+    assert "did not detect high-risk" in rep.executive_summary.lower() or "low-risk" in rep.executive_summary.lower()
+
+def test_malicious_survey_lure_screenshot_evaluates_to_high_or_critical_risk():
+    """Deceptive prize survey screenshot must evaluate to HIGH or CRITICAL risk."""
+    from PIL import Image, ImageDraw
+    import io, base64
+
+    # Render a clear image containing the Amazon $130 freebie phishing lure
+    img = Image.new("RGB", (450, 140), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 15), "Amazon 2020 resolutions: care more about customers.", fill=(0, 0, 0))
+    draw.text((10, 45), "So you'll get $130 freebies to do a survey mate", fill=(0, 0, 0))
+    draw.text((10, 75), "a2vcr.info/WYmoR8t0IPS", fill=(0, 0, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    rep = orchestrator.run_investigation(
+        input_type=InvestigationType.SCREENSHOT,
+        screenshot_base64=b64_str
+    )
+    assert rep.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL)
+    assert rep.model_confidence >= 0.70
+

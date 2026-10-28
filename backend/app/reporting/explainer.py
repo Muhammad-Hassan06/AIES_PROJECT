@@ -159,6 +159,30 @@ class GenerativeAISecurityExplainer:
             evidence_dict, risk_level, triggered_rules, url_result, nlp_result, vision_result
         )
 
+        prompt = f"""You are CyberShield AI's Lead Cybersecurity Analyst. Synthesize the following forensic cyber threat findings into an executive security assessment.
+
+EVIDENCE LEDGER:
+{json.dumps(evidence_dict, indent=2)}
+
+ASSESSED RISK LEVEL: {risk_level}
+
+TRIGGERED EXPERT RULES:
+{json.dumps(triggered_rules, indent=2)}
+
+MODALITY FINDINGS:
+- URL Analysis: {json.dumps(url_result or {}, indent=2)}
+- Message NLP: {json.dumps(nlp_result or {}, indent=2)}
+- Screenshot OCR: {json.dumps(vision_result or {}, indent=2)}
+
+Return a strict JSON object with these exact keys:
+{{
+  "executive_summary": "1-2 concise paragraphs explaining the threat or confirming safety.",
+  "technical_report": "Detailed technical breakdown referencing specific indicators and provenance.",
+  "key_warnings": ["List of critical cautions"],
+  "recommended_actions": ["Concrete actionable next steps for the user"]
+}}
+"""
+
         # Try configured multi-provider LLM (Gemini, Groq, OpenAI, Anthropic)
         try:
             from app.privacy.providers.llm_provider import llm_service

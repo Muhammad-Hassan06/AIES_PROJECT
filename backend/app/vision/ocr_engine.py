@@ -2,11 +2,13 @@ import re
 import io
 import time
 import base64
+import asyncio
+import concurrent.futures
 from typing import Dict, Any, List, Optional
 from PIL import Image
 from app.core.security import validate_image_header
 
-URL_REGEX = r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|pk|xyz|top|info|live)[^\s<>\"']*)"
+URL_REGEX = r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|pk|xyz|top|info|live|online|site|co|io|biz|ru|cn)[^\s<>\"']*)"
 
 SUSPICIOUS_LOGIN_KEYWORDS = [
     "sign in", "login", "password", "username", "enter pin", "otp verification",
@@ -15,21 +17,30 @@ SUSPICIOUS_LOGIN_KEYWORDS = [
 
 SUSPICIOUS_BRAND_CUES = [
     "hbl", "ubl", "meezan", "bank alfalah", "mcb", "easypaisa", "jazzcash",
-    "bisp", "nadra", "fbr", "pakistan post", "tcs", "state bank"
+    "bisp", "nadra", "fbr", "pakistan post", "tcs", "state bank", "amazon"
 ]
 
 class ScreenshotOCREngine:
     def __init__(self):
         self.tesseract_available = False
+        self.winocr_available = False
         self._check_tesseract()
+        self._check_winocr()
 
     def _check_tesseract(self):
         try:
             import pytesseract
-            # Test simple call
+            pytesseract.get_tesseract_version()
             self.tesseract_available = True
         except Exception:
             self.tesseract_available = False
+
+    def _check_winocr(self):
+        try:
+            import winocr
+            self.winocr_available = True
+        except Exception:
+            self.winocr_available = False
 
     def process_screenshot_base64(self, base64_str: str, filename: Optional[str] = "screenshot.png") -> Dict[str, Any]:
         start_time = time.time()
@@ -68,7 +79,7 @@ class ScreenshotOCREngine:
             img = Image.open(io.BytesIO(image_bytes))
             # Protect against decompression bomb
             img.verify()
-            img = Image.open(io.BytesIO(image_bytes)) # Re-open after verify
+            img = Image.open(io.BytesIO(image_bytes))  # Re-open after verify
             width, height = img.size
         except Exception as e:
             return {
@@ -84,11 +95,31 @@ class ScreenshotOCREngine:
         extracted_text = ""
         engine_name = "Embedded OCR Pattern Parser"
 
-        # Try Tesseract if installed and on PATH
-        if self.tesseract_available:
+        # Tier 1: Windows Native OCR (built into Windows 10/11)
+        if not extracted_text and self.winocr_available:
+            try:
+                import winocr
+                ocr_img = img.convert("RGBA") if img.mode != "RGBA" else img
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                            res = pool.submit(asyncio.run, winocr.recognize_pil(ocr_img)).result()
+                    else:
+                        res = loop.run_until_complete(winocr.recognize_pil(ocr_img))
+                except RuntimeError:
+                    res = asyncio.run(winocr.recognize_pil(ocr_img))
+
+                if res and res.text and len(res.text.strip()) > 0:
+                    extracted_text = res.text.strip()
+                    engine_name = "Windows Native OCR (winocr)"
+            except Exception:
+                pass
+
+        # Tier 2: Try Tesseract if available and on system PATH
+        if not extracted_text and self.tesseract_available:
             try:
                 import pytesseract
-                # Convert to grayscale for OCR improvement
                 gray_img = img.convert("L")
                 text = pytesseract.image_to_string(gray_img)
                 if text and len(text.strip()) > 0:
@@ -97,31 +128,43 @@ class ScreenshotOCREngine:
             except Exception:
                 pass
 
-        # If Tesseract didn't return text (e.g. binary not on system PATH in Windows),
-        # extract embedded text chunks, EXIF metadata, or visual text cues safely
+        # Tier 3: EXIF metadata / comment extraction or clean non-hallucinatory fallback
         if not extracted_text:
-            # Check for text in image info or test placeholder
             if "comment" in img.info:
-                extracted_text = str(img.info["comment"])
-            else:
-                extracted_text = f"[Visual OCR Scan: Image size {width}x{height} validated. Standard credential login form layout detected.]"
-                engine_name = "Heuristic Computer Vision Layout Analyzer"
+                comment_text = str(img.info["comment"]).strip()
+                if comment_text:
+                    extracted_text = comment_text
+                    engine_name = "Embedded EXIF/Image Metadata"
+            
+            if not extracted_text:
+                extracted_text = ""
+                engine_name = "Visual Layout Analyzer (No Text Detected)"
 
         # Extract URLs from recognized text
-        found_urls = re.findall(URL_REGEX, extracted_text, re.IGNORECASE)
-        # Clean URLs
+        found_urls = re.findall(URL_REGEX, extracted_text, re.IGNORECASE) if extracted_text else []
         cleaned_urls = []
         for u in found_urls:
-            u_clean = u.strip().rstrip(".,;:)")
+            u_clean = u.strip().rstrip(".,;:)-_$\\/'\"")
             if not u_clean.startswith("http"):
                 u_clean = "http://" + u_clean
             if u_clean not in cleaned_urls:
                 cleaned_urls.append(u_clean)
 
-        # Detect suspicious login keywords & brands in image text
-        text_lower = extracted_text.lower()
-        detected_keywords = [kw for kw in SUSPICIOUS_LOGIN_KEYWORDS if kw in text_lower]
-        detected_brands = [brand for brand in SUSPICIOUS_BRAND_CUES if brand in text_lower]
+        # Detect suspicious login keywords & brands with exact word boundaries
+        text_lower = extracted_text.lower() if extracted_text else ""
+        detected_keywords = []
+        if text_lower:
+            for kw in SUSPICIOUS_LOGIN_KEYWORDS:
+                pattern = r"\b" + re.escape(kw) + r"\b"
+                if re.search(pattern, text_lower):
+                    detected_keywords.append(kw)
+
+        detected_brands = []
+        if text_lower:
+            for brand in SUSPICIOUS_BRAND_CUES:
+                pattern = r"\b" + re.escape(brand) + r"\b"
+                if re.search(pattern, text_lower):
+                    detected_brands.append(brand)
 
         visual_indicators = []
         if detected_keywords:

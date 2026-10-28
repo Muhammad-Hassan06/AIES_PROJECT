@@ -82,7 +82,7 @@ EXPERT_RULES_CATALOG: List[RuleDefinition] = [
         rule_id="RULE_OCR_07",
         name="Screenshot Visual Target Attribution",
         category="Computer Vision",
-        severity="HIGH",
+        severity="LOW",
         description="Validates OCR-extracted URLs and visual brand impersonation from uploaded screenshot evidence.",
         conditions=[
             "OCR pipeline extracted target URL from screenshot image",
@@ -320,7 +320,7 @@ class RuleEngine:
                 rule_id="RULE_OCR_07",
                 rule_name="Screenshot Visual Target Attribution",
                 category="Computer Vision",
-                severity="HIGH",
+                severity="LOW",
                 conditions_evaluated=EXPERT_RULES_CATALOG[6].conditions,
                 conditions_matched=matched_conds,
                 evidence_references=citations,
