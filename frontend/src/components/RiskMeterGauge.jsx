@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 
-export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140 }) {
+export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140, label = 'FRAUD RISK' }) {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   const normLevel = (level || 'LOW').toUpperCase();
-  const targetPct = Math.min(100, Math.max(0, Math.round(score * 100)));
+  const isInsufficient = normLevel === 'INSUFFICIENT_EVIDENCE';
+  
+  // Normalize score: if score is > 1, assume 0-100 scale, else 0-1
+  const rawScore = typeof score === 'number' ? score : 0;
+  const targetPct = isInsufficient 
+    ? 0 
+    : Math.min(100, Math.max(0, rawScore > 1 ? Math.round(rawScore) : Math.round(rawScore * 100)));
 
   useEffect(() => {
-    // Check reduced motion
     const prefersReduced = typeof window !== 'undefined' && window.matchMedia
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false;
@@ -16,7 +21,6 @@ export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140 })
       return;
     }
 
-    // Animate from 0 to targetPct
     const timer = setTimeout(() => {
       setAnimatedScore(targetPct);
     }, 50);
@@ -34,26 +38,25 @@ export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140 })
       case 'LOW':
         return '#16A34A'; // Green
       default:
-        return '#64748B'; // Insufficient Evidence Slate
+        return '#94A3B8'; // Insufficient Evidence Slate
     }
   };
 
   const color = getColor();
-  // Semi-circle SVG coordinates: radius 40, circumference for half-circle is PI * 40 = 125.66
   const radius = 40;
   const strokeWidth = 8;
   const circumference = Math.PI * radius;
-  const strokeDashoffset = circumference - (circumference * animatedScore) / 100;
+  const strokeDashoffset = circumference - (circumference * (isInsufficient ? 0 : animatedScore)) / 100;
 
   return (
     <div 
       className="flex flex-col items-center justify-center select-none"
       style={{ width: size, height: size * 0.75 }}
       role="meter"
-      aria-valuenow={targetPct}
+      aria-valuenow={isInsufficient ? 0 : targetPct}
       aria-valuemin="0"
       aria-valuemax="100"
-      aria-label={`Risk meter: ${animatedScore} percent`}
+      aria-label={`Risk meter: ${isInsufficient ? 'Insufficient evidence' : animatedScore + ' / 100'}`}
     >
       <svg
         viewBox="0 0 100 60"
@@ -86,18 +89,18 @@ export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140 })
           y="46"
           textAnchor="middle"
           className="font-bold font-sans fill-slate-900"
-          style={{ fontSize: '18px' }}
+          style={{ fontSize: isInsufficient ? '15px' : '18px' }}
         >
-          {animatedScore}%
+          {isInsufficient ? '--' : `${animatedScore}/100`}
         </text>
         <text
           x="50"
           y="58"
           textAnchor="middle"
-          className="font-medium font-sans fill-slate-500"
-          style={{ fontSize: '7.5px' }}
+          className="font-medium font-sans fill-slate-500 uppercase tracking-wider"
+          style={{ fontSize: isInsufficient ? '5.5px' : '6.5px' }}
         >
-          RISK SCORE
+          {isInsufficient ? 'EVIDENCE INSUFFICIENT' : label}
         </text>
       </svg>
     </div>

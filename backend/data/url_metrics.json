@@ -8,63 +8,63 @@
   "evaluation_strategy": "Stratified 80/20 Holdout Split",
   "baseline_model": {
     "name": "Logistic Regression (Standardized)",
-    "accuracy": 1.0,
+    "accuracy": 0.998,
     "precision": 1.0,
-    "recall": 1.0,
-    "f1_score": 1.0,
+    "recall": 0.996,
+    "f1_score": 0.998,
     "roc_auc": 1.0,
-    "training_time_sec": 0.0433
+    "training_time_sec": 0.0431
   },
   "strong_model": {
     "name": "Random Forest (100 Trees, Depth 12)",
-    "accuracy": 1.0,
+    "accuracy": 0.998,
     "precision": 1.0,
-    "recall": 1.0,
-    "f1_score": 1.0,
+    "recall": 0.996,
+    "f1_score": 0.998,
     "roc_auc": 1.0,
-    "training_time_sec": 0.4562,
-    "inference_latency_ms": 20.791,
+    "training_time_sec": 0.3766,
+    "inference_latency_ms": 15.624,
     "false_positive_rate": 0.0,
-    "false_negative_rate": 0.0
+    "false_negative_rate": 0.004
   },
   "confusion_matrix": {
     "true_negatives": 250,
     "false_positives": 0,
-    "false_negatives": 0,
-    "true_positives": 250
+    "false_negatives": 1,
+    "true_positives": 249
   },
   "top_features": [
     {
-      "feature": "is_https",
-      "importance": 0.307
+      "feature": "url_length",
+      "importance": 0.2586
     },
     {
       "feature": "special_char_count",
-      "importance": 0.1758
-    },
-    {
-      "feature": "url_length",
-      "importance": 0.163
+      "importance": 0.1953
     },
     {
       "feature": "has_hyphen_in_domain",
-      "importance": 0.127
+      "importance": 0.1611
     },
     {
       "feature": "has_suspicious_tld",
-      "importance": 0.0751
+      "importance": 0.122
     },
     {
       "feature": "domain_length",
-      "importance": 0.0459
+      "importance": 0.0844
     },
     {
       "feature": "entropy",
-      "importance": 0.0408
+      "importance": 0.0635
     },
     {
       "feature": "suspicious_keyword_count",
-      "importance": 0.0314
+      "importance": 0.0507
+    },
+    {
+      "feature": "digit_ratio",
+      "importance": 0.0169
     }
   ],
   "roc_curve": [
@@ -74,18 +74,18 @@
     },
     {
       "fpr": 0.0,
-      "tpr": 0.972
+      "tpr": 0.964
     },
     {
       "fpr": 0.0,
-      "tpr": 0.992
+      "tpr": 0.988
     },
     {
       "fpr": 0.0,
       "tpr": 1.0
     },
     {
-      "fpr": 0.008,
+      "fpr": 0.02,
       "tpr": 1.0
     },
     {

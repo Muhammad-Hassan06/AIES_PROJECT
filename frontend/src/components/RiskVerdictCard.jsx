@@ -24,6 +24,16 @@ export default function RiskVerdictCard({
   const isInsufficient = riskLevel === 'INSUFFICIENT_EVIDENCE';
   const confidence = report.model_confidence || 0;
   const confidencePct = Math.round(confidence * 100);
+  const fraudRiskScore = report.fraud_risk_score !== undefined && report.fraud_risk_score !== null
+    ? report.fraud_risk_score
+    : confidencePct;
+  const predictedClass = report.predicted_class || (
+    isInsufficient
+      ? 'Insufficient Evidence / Needs Review'
+      : riskLevel === 'LOW'
+        ? 'Likely Legitimate'
+        : 'Phishing / Fraudulent'
+  );
 
   // Plain language summary: if insufficient evidence, calm informative message
   const plainSummary = isInsufficient
@@ -68,6 +78,8 @@ export default function RiskVerdictCard({
               <span>CASE: {report.case_id}</span>
               <span>•</span>
               <span className="capitalize">{report.input_type || 'Investigation'}</span>
+              <span>•</span>
+              <span className="font-semibold text-slate-700">{predictedClass}</span>
             </div>
           </div>
         </div>
@@ -97,19 +109,26 @@ export default function RiskVerdictCard({
         
         {/* Left: Animated Risk Meter (Gauge) (4 cols) */}
         <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-stone-50/60 rounded-xl border border-stone-100">
-          <RiskMeterGauge score={confidence} level={riskLevel} size={150} />
+          <RiskMeterGauge score={fraudRiskScore} level={riskLevel} size={150} label="FRAUD RISK" />
           
-          {/* In technical mode, show exact confidence & strength */}
-          {isTechnicalMode && (
-            <div className="mt-3 flex items-center justify-center space-x-4 text-xs font-mono text-slate-500">
-              <div>
-                Confidence: <strong className="text-slate-800">{confidencePct}%</strong>
-              </div>
-              <div>
-                Strength: <strong className="text-slate-800">{report.evidence_strength || 'MODERATE'}</strong>
-              </div>
+          <div className="mt-3 flex flex-col items-center text-center space-y-1 text-xs font-mono text-slate-600">
+            <div>
+              <span className="text-slate-500">Predicted Class:</span>{' '}
+              <strong className={riskLevel === 'LOW' ? 'text-emerald-700' : isInsufficient ? 'text-slate-600' : 'text-red-700'}>
+                {predictedClass}
+              </strong>
             </div>
-          )}
+            {isTechnicalMode && (
+              <>
+                <div className="text-[11px] text-slate-500">
+                  {report.confidence_interpretation || `Model Confidence: ${confidencePct}% — not a calibrated probability`}
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {report.probability_calibrated ? 'Calibrated Probability' : 'Uncalibrated Model Output (Operational Decision Rules Applied)'}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right: Plain-Language Summary + Top Actions (8 cols) */}

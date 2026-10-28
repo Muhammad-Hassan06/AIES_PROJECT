@@ -340,24 +340,53 @@ class AgenticInvestigationOrchestrator:
 
         if is_insufficient:
             final_risk = RiskLevel.INSUFFICIENT_EVIDENCE
-            model_confidence = 0.30
-            evidence_strength = "WEAK"
+            fraud_risk_score = 0
+            model_confidence = 0.0
+            evidence_strength = "WEAK (Insufficient Diagnostic Indicators)"
+            predicted_class = "Insufficient Evidence / Needs Review"
+            decision_status = "INSUFFICIENT_EVIDENCE"
+            score_interpretation = "Fraud Risk Score: Indeterminate (Insufficient Evidence)"
+            confidence_interpretation = "Model Confidence: Insufficient data to evaluate"
         elif "CRITICAL" in rule_severities or (url_prob >= 0.85 and nlp_risk >= 0.80):
             final_risk = RiskLevel.CRITICAL
-            model_confidence = max(url_prob, nlp_risk, 0.92)
+            raw_threat_max = max(url_prob, nlp_risk)
+            fraud_risk_score = int(round(max(raw_threat_max, 0.90) * 100))
+            model_confidence = max(raw_threat_max, 0.92)
             evidence_strength = "STRONG (Multi-modal corroboration)"
+            predicted_class = "Phishing / Fraudulent"
+            decision_status = "VERDICT_ISSUED"
+            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
+            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
         elif "HIGH" in rule_severities or url_prob >= 0.70 or nlp_risk >= 0.70:
             final_risk = RiskLevel.HIGH
-            model_confidence = max(url_prob, nlp_risk, 0.82)
+            raw_threat_max = max(url_prob, nlp_risk)
+            fraud_risk_score = int(round(max(raw_threat_max, 0.75) * 100))
+            model_confidence = max(raw_threat_max, 0.82)
             evidence_strength = "SUBSTANTIAL"
+            predicted_class = "Phishing / Fraudulent"
+            decision_status = "VERDICT_ISSUED"
+            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
+            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
         elif "MEDIUM" in rule_severities or url_prob >= 0.45 or nlp_risk >= 0.45:
             final_risk = RiskLevel.MEDIUM
-            model_confidence = max(url_prob, nlp_risk, 0.65)
+            raw_threat_max = max(url_prob, nlp_risk)
+            fraud_risk_score = int(round(max(raw_threat_max, 0.45) * 100))
+            model_confidence = max(raw_threat_max, 0.65)
             evidence_strength = "MODERATE"
+            predicted_class = "Suspicious / Potential Threat"
+            decision_status = "VERDICT_ISSUED"
+            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
+            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
         else:
             final_risk = RiskLevel.LOW
-            model_confidence = round(1.0 - max(url_prob, nlp_risk), 4)
+            raw_threat_max = max(url_prob, nlp_risk)
+            fraud_risk_score = int(round(raw_threat_max * 100))
+            model_confidence = round(1.0 - raw_threat_max, 4)
             evidence_strength = "LOW RISK"
+            predicted_class = "Likely Legitimate"
+            decision_status = "VERDICT_ISSUED"
+            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
+            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
 
         step_risk_dur = (time.time() - step_risk_start) * 1000.0
 
@@ -366,7 +395,7 @@ class AgenticInvestigationOrchestrator:
             agent_name="7. Risk Assessment Agent",
             status=AgentStatus.COMPLETED,
             duration_ms=round(step_risk_dur, 2),
-            summary=f"Synthesized calibrated risk level: {final_risk.value} (Confidence: {model_confidence:.1%}, Strength: {evidence_strength}).",
+            summary=f"Synthesized calibrated risk level: {final_risk.value} (Risk Score: {fraud_risk_score}/100, Confidence: {model_confidence:.1%}, Strength: {evidence_strength}).",
             findings_count=1
         ))
 
@@ -435,6 +464,12 @@ class AgenticInvestigationOrchestrator:
             url_result=url_result_obj,
             nlp_result=nlp_result_obj,
             vision_result=vision_result_obj,
+            fraud_risk_score=fraud_risk_score,
+            predicted_class=predicted_class,
+            score_interpretation=score_interpretation,
+            confidence_interpretation=confidence_interpretation,
+            probability_calibrated=False,
+            decision_status=decision_status,
             raw_input=raw_input_data,
             model_versions=active_model_versions
         )

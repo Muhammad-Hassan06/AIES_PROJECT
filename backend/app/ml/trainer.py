@@ -72,6 +72,11 @@ def generate_augmented_dataset(target_size=2400):
     # 1. Benign URLs (Label 0)
     for i in range(target_size // 2):
         base = LEGITIMATE_SEEDS[i % len(LEGITIMATE_SEEDS)]
+        # Realistic web distribution: both HTTPS and HTTP appear in legitimate browsing
+        if i % 4 == 0:
+            base = base.replace("https://", "http://")
+        elif i % 4 == 1:
+            base = base.replace("https://", "")
         if i >= len(LEGITIMATE_SEEDS):
             subpaths = ["/docs", "/profile", "/article/2026", "/help/faq", "/contact-us", "/dashboard", "/view?id=" + str(i)]
             base = base + subpaths[i % len(subpaths)]
@@ -82,6 +87,9 @@ def generate_augmented_dataset(target_size=2400):
     # 2. Phishing URLs (Label 1)
     for i in range(target_size // 2):
         base = PHISHING_SEEDS[i % len(PHISHING_SEEDS)]
+        # Modern phishing reality: over 65% of phishing campaigns utilize valid SSL certificates
+        if i % 10 < 7:
+            base = base.replace("http://", "https://")
         if i >= len(PHISHING_SEEDS):
             lures = ["&session_token=", "?token=auth", "/verify?user=", "/submit.php?ref=" + str(i), "/step2/otp.html"]
             base = base + lures[i % len(lures)]

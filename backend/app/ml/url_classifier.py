@@ -190,15 +190,6 @@ class URLThreatClassifier:
             is_phishing = phishing_prob >= 0.50
             model_name = "Heuristic Phishing Scorer (Uncalibrated Fallback)"
 
-        # Check known legitimate domain whitelist
-        parsed_url = urlparse(url if "://" in url else "http://" + url)
-        hostname = (parsed_url.hostname or "").lower()
-        is_known_legit = any(hostname == d or hostname.endswith("." + d) for d in KNOWN_LEGITIMATE_DOMAINS)
-        if is_known_legit and not features["is_domain_ip"] and not features["has_at_symbol"] and not features["has_double_slash_redirect"] and features["suspicious_keyword_count"] == 0:
-            phishing_prob = 0.02
-            is_phishing = False
-            model_name = "Verified Domain Whitelist & RandomForest"
-
         # Generate interpretable signals for explainability
         top_signals = []
         if features["is_domain_ip"]:

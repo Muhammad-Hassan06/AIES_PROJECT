@@ -1,0 +1,1205 @@
+{
+  "metadata": {
+    "evaluation_date": "2026-10-29T00:32:19.460047",
+    "models_evaluated": {
+      "mode_a_url": "RandomForestClassifier (100 estimators, max_depth=12, StandardScaler)",
+      "mode_b_phishing_text": "MultinomialNB (TfidfVectorizer sublinear_tf, ngrams 1-2)",
+      "mode_c_legitimate_text": "MultinomialNB (TfidfVectorizer sublinear_tf, ngrams 1-2)",
+      "mode_d_screenshot_vision": "winocr / pytesseract OCR Engine + Downstream NLP/URL Fusion"
+    }
+  },
+  "mode_a_url": {
+    "metrics": {
+      "total_samples": 50,
+      "true_positives": 25,
+      "true_negatives": 25,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "confusion_matrix": [
+        [
+          25,
+          0
+        ],
+        [
+          0,
+          25
+        ]
+      ]
+    },
+    "sample_count": 50,
+    "benign_count": 25,
+    "phishing_count": 25,
+    "details": [
+      {
+        "url": "https://www.wikipedia.org",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_reference"
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/Computer_security",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_reference"
+      },
+      {
+        "url": "https://github.com/torvalds/linux",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_tech"
+      },
+      {
+        "url": "https://accounts.google.com/signin/v2/identifier",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_auth_keyword"
+      },
+      {
+        "url": "https://github.com/login",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_auth_keyword"
+      },
+      {
+        "url": "https://support.apple.com/en-us/HT204144",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_support"
+      },
+      {
+        "url": "https://www.microsoft.com/en-us/security",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_security_keyword"
+      },
+      {
+        "url": "https://stackoverflow.com/questions/tagged/python",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_forum"
+      },
+      {
+        "url": "https://www.nytimes.com/section/technology",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_news"
+      },
+      {
+        "url": "https://www.bbc.com/news/world-asia-60000000",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_news"
+      },
+      {
+        "url": "https://nust.edu.pk/academics/undergraduate",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_edu"
+      },
+      {
+        "url": "https://fast.nu.edu.pk/admissions/eligibility",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_edu"
+      },
+      {
+        "url": "https://www.python.org/downloads/release/python-3120",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_tech"
+      },
+      {
+        "url": "https://docs.docker.com/engine/install",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_docs"
+      },
+      {
+        "url": "https://www.amazon.com/gp/help/customer/display.html",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_ecom"
+      },
+      {
+        "url": "https://pkcert.gov.pk/contact-us",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_gov"
+      },
+      {
+        "url": "https://www.nadra.gov.pk/identity/identity-national-id",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_gov"
+      },
+      {
+        "url": "https://www.daraz.pk/help-center",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_ecom"
+      },
+      {
+        "url": "https://pypi.org/project/scikit-learn",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_repo"
+      },
+      {
+        "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_docs"
+      },
+      {
+        "url": "https://www.who.int/emergencies/disease-outbreak-news",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_health"
+      },
+      {
+        "url": "https://openai.com/research/overview",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_ai"
+      },
+      {
+        "url": "https://www.kaggle.com/datasets",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_data"
+      },
+      {
+        "url": "https://huggingface.co/models",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_ai"
+      },
+      {
+        "url": "https://www.sc.com/en/regulatory-disclosures",
+        "ground_truth": "Legitimate",
+        "prediction": "Legitimate",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "benign_banking"
+      },
+      {
+        "url": "http://192.168.1.55/secure/login.php",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "ip_host_login"
+      },
+      {
+        "url": "http://103.224.182.245/auth/online-banking",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "ip_host_phish"
+      },
+      {
+        "url": "http://paypal-security-verification.servehttp.com/update",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "brand_ddns"
+      },
+      {
+        "url": "http://wellsfargo-verify-customer.top/auth/login",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "brand_tld_top"
+      },
+      {
+        "url": "http://netflix-billing-issue-update.xyz/login.html",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "brand_tld_xyz"
+      },
+      {
+        "url": "http://hbl.com.pk.customer-login.account-security.top/web",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "excess_subdomains"
+      },
+      {
+        "url": "http://appleid-support-icloud-verify.info/auth",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "brand_spoof"
+      },
+      {
+        "url": "http://chase-security-alert.club/signin.php?token=9281",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "banking_spoof"
+      },
+      {
+        "url": "http://secure-login.bankalfalah.top-finance.xyz/otp",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "banking_spoof"
+      },
+      {
+        "url": "http://bisp-funds-release-portal.xyz/claim-cnic",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "pakistan_lure"
+      },
+      {
+        "url": "http://easypaisa-bonus-cash-claim.top/pin-verify",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "wallet_spoof"
+      },
+      {
+        "url": "http://jazzcash-lottery-gift.live/claim.php",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "lottery_scam"
+      },
+      {
+        "url": "http://fbr-tax-refund-portal.top/iris/refund-claim",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "tax_lure"
+      },
+      {
+        "url": "http://pta-sim-verification-urgent.xyz/cnic-biometric",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "pta_lure"
+      },
+      {
+        "url": "http://customs-detained-parcel-duty.top/pakistan-post/pay",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "parcel_smishing"
+      },
+      {
+        "url": "http://a2vcr.info/WYmoR8t0IPS",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "user_provided_smishing_url"
+      },
+      {
+        "url": "http://microsoft-365-password-expired.top/owa/auth",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "credential_harvest"
+      },
+      {
+        "url": "http://google-drive-shared-doc-view.xyz/auth.php",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "credential_harvest"
+      },
+      {
+        "url": "http://meezanbank.online-security-update.top/ebanking",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "banking_spoof"
+      },
+      {
+        "url": "http://tcs-courier-address-update.xyz/pay-charges",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "courier_scam"
+      },
+      {
+        "url": "http://nadra-online-verifications.top/id-card-renew",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "identity_theft"
+      },
+      {
+        "url": "http://185.190.140.22/hbl/index.html",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "ip_banking_lure"
+      },
+      {
+        "url": "http://binance-account-freeze-warning.xyz/unfreeze",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "crypto_scam"
+      },
+      {
+        "url": "http://metamask-seed-phrase-restore.top/wallet",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "crypto_scam"
+      },
+      {
+        "url": "http://login-amazon-prime-refund.top/billing",
+        "ground_truth": "Phishing",
+        "prediction": "Phishing",
+        "correct": true,
+        "risk_score": null,
+        "probability": null,
+        "type": "ecom_refund_scam"
+      }
+    ]
+  },
+  "mode_b_phishing_text": {
+    "metrics": {
+      "samples": 30,
+      "detected_phishing": 29,
+      "missed_phishing": 1,
+      "recall": 0.9667
+    }
+  },
+  "mode_c_legitimate_text": {
+    "metrics": {
+      "samples": 30,
+      "correctly_identified_legitimate": 30,
+      "false_positives": 0,
+      "specificity_accuracy": 1.0
+    }
+  },
+  "combined_nlp_metrics": {
+    "total_samples": 60,
+    "true_positives": 29,
+    "true_negatives": 30,
+    "false_positives": 0,
+    "false_negatives": 1,
+    "accuracy": 0.9833,
+    "precision": 1.0,
+    "recall": 0.9667,
+    "f1_score": 0.9831,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0333,
+    "confusion_matrix": [
+      [
+        30,
+        0
+      ],
+      [
+        1,
+        29
+      ]
+    ]
+  },
+  "text_details": [
+    {
+      "text_snippet": "URGENT: Your bank account will be closed in 12 hours. Verify...",
+      "category": "banking_urgency",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "BISP Ehsaas 8171: Aap ka 25,000 rupay ka wazeefa manzoor hog...",
+      "category": "bisp_roman_urdu",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "FIA Anti-Corruption: An arrest warrant #4401 has been regist...",
+      "category": "authority_threat",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Jeeto Pakistan: Mubarak ho! Aap ne 50 tolay sona jeet liya h...",
+      "category": "lottery_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "FedEx Delivery: Your parcel is held at the airport due to un...",
+      "category": "parcel_smishing",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9999,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Amazon 2020 resolutions: 1) not to be greedy 2) care more ab...",
+      "category": "user_smishing_case",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9834,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Easypaisa Alert: Your wallet has been locked due to illegal ...",
+      "category": "wallet_pin_harvest",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Meezan Bank: Unauthorized transfer of Rs 95,000 detected fro...",
+      "category": "fake_alert",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "PTA Notice: Your mobile device IMEI is blocked. Send Rs 1,50...",
+      "category": "pta_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your Apple ID has been suspended. Please confirm your passwo...",
+      "category": "apple_id_phish",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9996,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Congratulations! You have been selected for online job payin...",
+      "category": "job_deposit_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "HBL Alert: Your biometric registration has expired. Update C...",
+      "category": "biometric_lure",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Netflix: We were unable to process your subscription renewal...",
+      "category": "subscription_phish",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9653,
+      "confidence": null
+    },
+    {
+      "text_snippet": "FBR Notice: Final tax audit penalty of PKR 50,000 is levied....",
+      "category": "tax_threat",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Aap ka parcel deliver nahi ho saka kyn k address adhoora hai...",
+      "category": "smishing_urdu",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Google Security Alert: Someone in Russia logged into your Gm...",
+      "category": "security_spoof",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9923,
+      "confidence": null
+    },
+    {
+      "text_snippet": "State Life Insurance: Your policy claim of Rs 1,200,000 is r...",
+      "category": "insurance_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9984,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Binance: Security upgrade required. Input your 12-word recov...",
+      "category": "crypto_seed_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.975,
+      "confidence": null
+    },
+    {
+      "text_snippet": "JazzCash: Mubarak ho aap ko 10,000 ka cash prize nikla hai. ...",
+      "category": "wallet_harvest",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Emergency: Dad I lost my phone and wallet. Please transfer R...",
+      "category": "family_emergency_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9993,
+      "confidence": null
+    },
+    {
+      "text_snippet": "UBL Netbanking: Your account access will be terminated tonig...",
+      "category": "kyc_smishing",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.998,
+      "confidence": null
+    },
+    {
+      "text_snippet": "DHL Express: Package #DH-88219 could not be cleared from cus...",
+      "category": "courier_fee",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Meta Warning: Your Instagram profile violates copyright. You...",
+      "category": "social_ban_lure",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9999,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Canada Work Permit: Direct visa granted without IELTS. Pay e...",
+      "category": "visa_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9995,
+      "confidence": null
+    },
+    {
+      "text_snippet": "WhatsApp Gold: Your premium access is unlocked. Download the...",
+      "category": "malware_apk_lure",
+      "ground_truth": "Malicious",
+      "prediction": "Legitimate",
+      "correct": false,
+      "risk_score": 0.2,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Bank Alfalah: OTP for transaction of Rs 49,000 is 902183. If...",
+      "category": "reverse_call_scam",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.9996,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Electricity Department: Your meter will be disconnected toda...",
+      "category": "utility_cutoff_threat",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 0.5979,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Scholarship Award: You have won Prime Minister Laptop and La...",
+      "category": "scholarship_lure",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Inam Mubarak! Lucky draw winner of Toyota Corolla 2026. Send...",
+      "category": "car_lottery",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Zong Internet: You won 100 GB free 4G data for 1 year. Claim...",
+      "category": "telecom_lure",
+      "ground_truth": "Malicious",
+      "prediction": "Malicious",
+      "correct": true,
+      "risk_score": 1.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Hey, are we still meeting for lunch at the cafeteria around ...",
+      "category": "casual_meeting",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0001,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your Uber ride has arrived. The driver is waiting outside yo...",
+      "category": "ride_dispatch",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Dear student, CS402 Artificial Intelligence lab session will...",
+      "category": "university_announcement",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your package from Daraz has been delivered to your front doo...",
+      "category": "legitimate_delivery",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Hi Ali, I have shared the project documentation on Google Dr...",
+      "category": "work_collab",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0002,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your appointment with Dr. Salman at Shaukat Khanum Hospital ...",
+      "category": "medical_reminder",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Debit Card Alert: PKR 2,450 spent at Metro Cash & Carry on c...",
+      "category": "routine_bank_debit",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.2,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Reminder: Library book 'Deep Learning' by Goodfellow is due ...",
+      "category": "library_notice",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Weather forecast: Scattered thunderstorms expected across Ra...",
+      "category": "weather_alert",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0001,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Thanks for dinner yesterday! It was great catching up with e...",
+      "category": "friendly_social",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.003,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your electricity bill for consumer #881923 has been paid suc...",
+      "category": "payment_receipt",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Meeting invite: Project 3 Final Sprint Retrospective startin...",
+      "category": "calendar_invite",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Can you please send me the lecture slides from yesterday? I ...",
+      "category": "student_inquiry",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0435,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your TCS parcel with tracking number 77819241 is out for del...",
+      "category": "courier_dispatch",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0576,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Hi mom, I reached the hostel safely. Everything is fine, wil...",
+      "category": "family_checkin",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your gym membership for the month of November has been renew...",
+      "category": "gym_renewal",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0007,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Dear customer, your request for checkbook issuance has been ...",
+      "category": "routine_bank_service",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0019,
+      "confidence": null
+    },
+    {
+      "text_snippet": "GitHub: A new comment was posted on issue #42 in repository ...",
+      "category": "github_notification",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0001,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your flight PK-301 from Karachi to Islamabad is on schedule....",
+      "category": "flight_schedule",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0135,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Here is the recipe for chicken biryani that you asked for ye...",
+      "category": "cooking_recipe",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0001,
+      "confidence": null
+    },
+    {
+      "text_snippet": "The seminar on Computer Vision and Ethical AI will be held t...",
+      "category": "academic_event",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0007,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Payment received: Rs 500 transferred to your mobile balance ...",
+      "category": "routine_mobile_topup",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.2,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Hi team, please remember to submit your weekly timesheets be...",
+      "category": "office_admin",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Don't forget to buy milk and bread on your way home from the...",
+      "category": "household_errand",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.2,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Your car servicing at Toyota Motors is complete. You may col...",
+      "category": "service_pickup",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.001,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Happy Birthday! Wishing you a wonderful year ahead filled wi...",
+      "category": "birthday_greeting",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.1356,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Dear applicant, we have received your application for the Gr...",
+      "category": "job_acknowledgment",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0345,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Water supply maintenance notice: Pipeline repairs scheduled ...",
+      "category": "civic_notice",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0074,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Thanks for your feedback on our mobile app. We appreciate yo...",
+      "category": "feedback_reply",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0101,
+      "confidence": null
+    },
+    {
+      "text_snippet": "Let's meet up for dinner after work!",
+      "category": "user_benign_chat",
+      "ground_truth": "Legitimate",
+      "prediction": "Legitimate",
+      "correct": true,
+      "risk_score": 0.0106,
+      "confidence": null
+    }
+  ],
+  "mode_d_screenshot": {
+    "metrics": {
+      "total_samples": 11,
+      "true_positives": 6,
+      "true_negatives": 5,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "confusion_matrix": [
+        [
+          5,
+          0
+        ],
+        [
+          0,
+          6
+        ]
+      ]
+    },
+    "insufficient_evidence_handled": 2,
+    "samples_evaluated": 13,
+    "details": [
+      {
+        "image": "phish_bank_login.png",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 117,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      },
+      {
+        "image": "phish_survey_smishing.png",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 110,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      },
+      {
+        "image": "benign_chat_dinner.png",
+        "ground_truth": "Legitimate",
+        "ocr_text_length": 76,
+        "extracted_urls": [],
+        "verdict": "LIKELY_LEGITIMATE",
+        "correct": true
+      },
+      {
+        "image": "benign_university_timetable.png",
+        "ground_truth": "Legitimate",
+        "ocr_text_length": 117,
+        "extracted_urls": [],
+        "verdict": "LIKELY_LEGITIMATE",
+        "correct": true
+      },
+      {
+        "image": "phish_bisp_lottery.png",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 65,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      },
+      {
+        "image": "benign_uber_receipt.png",
+        "ground_truth": "Legitimate",
+        "ocr_text_length": 111,
+        "extracted_urls": [],
+        "verdict": "LIKELY_LEGITIMATE",
+        "correct": true
+      },
+      {
+        "image": "phish_fedex_fee.png",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 72,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      },
+      {
+        "image": "benign_reminder_dentist.png",
+        "ground_truth": "Legitimate",
+        "ocr_text_length": 96,
+        "extracted_urls": [],
+        "verdict": "LIKELY_LEGITIMATE",
+        "correct": true
+      },
+      {
+        "image": "phish_pta_block.png",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 103,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      },
+      {
+        "image": "benign_weather_forecast.png",
+        "ground_truth": "Legitimate",
+        "ocr_text_length": 117,
+        "extracted_urls": [],
+        "verdict": "LIKELY_LEGITIMATE",
+        "correct": true
+      },
+      {
+        "image": "unreadable_blank.png",
+        "ground_truth": "Unreadable / Insufficient",
+        "ocr_text_length": 0,
+        "extracted_urls": [],
+        "verdict": "INSUFFICIENT_EVIDENCE",
+        "correct": true
+      },
+      {
+        "image": "unreadable_noise.png",
+        "ground_truth": "Unreadable / Insufficient",
+        "ocr_text_length": 0,
+        "extracted_urls": [],
+        "verdict": "INSUFFICIENT_EVIDENCE",
+        "correct": true
+      },
+      {
+        "image": "User Real Amazon Smishing Capture",
+        "ground_truth": "Phishing",
+        "ocr_text_length": 151,
+        "extracted_urls": [],
+        "verdict": "PHISHING",
+        "correct": true
+      }
+    ]
+  }
+}

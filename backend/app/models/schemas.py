@@ -133,6 +133,12 @@ class InvestigationReport(BaseModel):
     url_result: Optional[URLAnalysisResult] = None
     nlp_result: Optional[NLPAnalysisResult] = None
     vision_result: Optional[ScreenshotAnalysisResult] = None
+    fraud_risk_score: Optional[int] = 0
+    predicted_class: str = "Likely Legitimate"
+    score_interpretation: str = "Fraud Risk Score: 0/100"
+    confidence_interpretation: str = "Model Confidence: 0% — not a calibrated probability"
+    probability_calibrated: bool = False
+    decision_status: str = "VERDICT_ISSUED"
     raw_input: Dict[str, Any] = Field(default_factory=dict)
     model_versions: Dict[str, str] = Field(default_factory=dict)
 

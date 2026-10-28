@@ -13,32 +13,32 @@ TFIDF_PATH = os.path.join(MODEL_DIR, "nlp_tfidf.joblib")
 SPAN_PATTERNS = [
     {
         "category": "Credential Harvesting",
-        "pattern": r"\b(otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|cnic number|card number|cvv)\b",
+        "pattern": r"\b(otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|cnic number|card number|cvv|seed phrase|recovery seed|mpin)\b",
         "explanation": "Requesting one-time passwords, PINs, or credentials directly violates legitimate authentication protocols."
     },
     {
         "category": "Urgency & Pressure",
-        "pattern": r"\b(urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be blocked|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in)\b",
+        "pattern": r"\b(urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be (blocked|closed|terminated)|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in)\b",
         "explanation": "Artificial deadlines and panic inducement coerce victims into acting before verifying authenticity."
     },
     {
         "category": "Legal & Intimidation Threat",
-        "pattern": r"\b(arrest warrant|fia|police|court notice|legal action|fir|penalty|fine of rs|prosecuted|detained)\b",
-        "explanation": "Threatening legal arrest or law enforcement penalties is a high-pressure coercion tactic."
+        "pattern": r"\b(arrest warrant|fia|police|court notice|legal action|fir|penalty|fine of rs|prosecuted|detained|imei is blocked|meter will be disconnected|permanently blocked|copyright|banned in \d+)\b",
+        "explanation": "Threatening legal arrest, penalties, or service disconnection is a high-pressure coercion tactic."
     },
     {
         "category": "Financial / Fee Request",
-        "pattern": r"\b(processing fee|customs duty|clearance charge|advance payment|tax payment|transfer rs\.? ?\d+|wire money|deposit)\b",
+        "pattern": r"\b(processing fee|customs duty|unpaid duty|duty of|clearance charge|advance payment|tax payment|registration fee|redelivery fee|re-delivery fee|delivery charges?|deposit|wire money|transfer rs\.? ?\d+|western union|processing charges?)\b",
         "explanation": "Demanding advance fees or unusual processing charges before prize or parcel delivery is typical advance-fee fraud."
     },
     {
         "category": "Prize & Lottery Lure",
-        "pattern": r"\b(won rs\.? ?\d+|prize of rs|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey)\b",
+        "pattern": r"\b(won rs\.? ?\d+|prize of rs|cash prize|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey|scholarship|laptop scholarship|free iphone|100 gb free)\b",
         "explanation": "Unsolicited cash rewards, survey freebies, or lottery wins entice victims into fraudulent fee payment or credential sharing."
     },
     {
         "category": "Institutional Impersonation",
-        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|nadra|fbr|pakistan post|tcs courier|jazzcash|easypaisa|amazon|microsoft|apple|google|netflix|paypal)\b",
+        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|nadra|fbr|pta|pakistan post|tcs courier|fedex|dhl|ups|jazzcash|easypaisa|amazon|microsoft|apple|google|netflix|paypal|binance|metamask|state life)\b",
         "explanation": "Invoking reputable brands, institutions, or public programs gives false credibility to the communication."
     },
     {
@@ -47,8 +47,13 @@ SPAN_PATTERNS = [
         "explanation": "Instructing the recipient to bypass official channels or keep communications secret."
     },
     {
+        "category": "Suspicious External Link",
+        "pattern": r"(https?://[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:top|xyz|info|live|buzz|club|fit|click)[^\s<>\"']*)",
+        "explanation": "Contains links pointing to suspicious, high-risk, or non-official domain registrations."
+    },
+    {
         "category": "Roman Urdu Fraud Cue",
-        "pattern": r"\b(inaam|mubarak ho|paise jeet|parchi|account band|bisp raqam|code bhejein|jaldi karein|easypaisa pin|jazzcash account)\b",
+        "pattern": r"\b(inaam|mubarak ho|paise jeet|parchi|account band|bisp raqam|code bhejein|jaldi karein|easypaisa pin|jazzcash account|wazeefa manzoor|foran rabta|tolay sona)\b",
         "explanation": "Common Roman Urdu phrasing frequently observed in localized SMS and WhatsApp cyber scams in Pakistan."
     }
 ]
@@ -104,11 +109,24 @@ class SocialEngineeringNLPClassifier:
 
         if self.model is not None and self.vectorizer is not None and len(clean_text) > 0:
             vec = self.vectorizer.transform([clean_text])
-            proba = self.model.predict_proba(vec)[0]
-            # Class 1 = Social Engineering / Fraud
-            risk_score = float(proba[1])
-            is_malicious = bool(risk_score >= 0.50)
-            model_name = "TF-IDF + MultinomialNB (Social Engineering Corpus)"
+            if vec.nnz == 0:
+                raw_prob = 0.05
+            else:
+                proba = self.model.predict_proba(vec)[0]
+                raw_prob = float(proba[1])
+
+            # Corroborate raw ML score with extracted semantic signals
+            if len(spans) == 0:
+                # Text contains zero fraud cues, urgency, credential harvesting, or threats.
+                # Suppress out-of-vocabulary Naive Bayes prior drift on innocent messages.
+                risk_score = min(raw_prob * 0.25, 0.20)
+                is_malicious = False
+                model_name = "TF-IDF + MultinomialNB (Corroborated Legitimate)"
+            else:
+                # Semantic fraud indicators are corroborated by span analysis
+                risk_score = raw_prob
+                is_malicious = bool(risk_score >= 0.50)
+                model_name = "TF-IDF + MultinomialNB (Social Engineering Corpus)"
         else:
             # Deterministic rule-based score based on span count and severity
             score = 0.0
