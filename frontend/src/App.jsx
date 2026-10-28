@@ -64,14 +64,11 @@ function AppContent() {
           }
         }
 
-        // If no deep link, load most recent case if available
-        if (cases && cases.length > 0) {
-          const latestCase = await getInvestigation(cases[0].case_id).catch(() => null);
-          if (latestCase) setCurrentReport(latestCase);
-        }
+        // Do not auto-load old cases into intake form on fresh mount unless explicitly requested via deep link
       } catch (e) {
         console.error('Initialization / deep-link error', e);
       }
+
     }
 
     handleDeepLink();

@@ -215,6 +215,12 @@ class DigitalPrivacyOrchestrator:
                 conf_exp = "Independently verified against cataloged public breach release records."
                 r_level = PrivacyRiskLevel.HIGH
                 rec_act = RemediationActionType.SECURE_ACCOUNT
+            elif s_type == "OSINT_REGISTRATION_CHECK":
+                v_status = VerificationStatus.VERIFIED
+                conf = 0.90
+                conf_exp = "Independently verified registration signal on public service endpoint via Holehe protocol."
+                r_level = PrivacyRiskLevel.LOW
+                rec_act = RemediationActionType.REVIEW_PRIVACY
             elif s_type == "LOCAL_VAULT":
                 v_status = VerificationStatus.VERIFIED
                 conf = 0.98
@@ -227,6 +233,7 @@ class DigitalPrivacyOrchestrator:
                 conf_exp = "Search engine keyword index proximity. Does not establish confirmed account creation."
                 r_level = PrivacyRiskLevel.LOW
                 rec_act = RemediationActionType.REVIEW_PRIVACY
+
 
             f_id = f"FND-{uuid.uuid4().hex[:6].upper()}"
             verified_findings.append(PrivacyFinding(
@@ -428,6 +435,29 @@ class DigitalPrivacyOrchestrator:
                     created_at=now_utc,
                     last_updated_at=now_utc
                 ))
+
+            elif f.recommended_action == RemediationActionType.REVIEW_PRIVACY:
+                inst = (
+                    f"Account Privacy & Exposure Reduction ({f.source_name}):\n"
+                    f"1. Open privacy settings on {f.source_name} and adjust contact visibility to private.\n"
+                    f"2. Enable Two-Factor Authentication (2FA) using an authenticator app.\n"
+                    f"3. Review and revoke access for unused third-party connected apps.\n"
+                    f"4. If you no longer use this service, request account deletion via the platform's account settings."
+                )
+                tasks.append(PrivacyRemediationTask(
+                    task_id=t_id,
+                    investigation_id=inv_id,
+                    finding_id=f.finding_id,
+                    action_type=RemediationActionType.REVIEW_PRIVACY,
+                    action_status=RemediationStatus.INSTRUCTIONS_AVAILABLE,
+                    target_name=f.source_name,
+                    target_identifier_masked=target_masked,
+                    instructions_text=inst,
+                    official_portal_url=f.source_url or "https://support.google.com/accounts/answer/46526",
+                    created_at=now_utc,
+                    last_updated_at=now_utc
+                ))
+
 
         # Add carrier-specific SMS block task if Pakistani phone number is investigated
         if phone_meta.get("is_pakistani"):

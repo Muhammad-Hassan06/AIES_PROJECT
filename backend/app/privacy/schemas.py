@@ -16,6 +16,8 @@ class ExposureCategory(str, Enum):
     DATA_BROKER = "DATA_BROKER"
     SEARCH_INDEX = "SEARCH_INDEX"
     UNVERIFIED_LEAK = "UNVERIFIED_LEAK"
+    ACCOUNT_REGISTRATION = "ACCOUNT_REGISTRATION"
+
 
 class VerificationStatus(str, Enum):
     VERIFIED = "VERIFIED"

@@ -406,3 +406,16 @@ def test_api_privacy_investigation_flow():
     # DELETE investigation
     del_res = client.delete(f"/api/privacy/investigations/{inv_id}")
     assert del_res.status_code == 200
+
+def test_holehe_registration_discovery_adapter():
+    from app.privacy.providers.discovery import HoleheRegistrationDiscoveryAdapter
+    adapter = HoleheRegistrationDiscoveryAdapter()
+    assert adapter.provider_id == "holehe_registration"
+    assert adapter.is_configured() is True
+    assert "email" in adapter.supported_identifiers
+
+    # Test with non-email identifier
+    res, success, note = adapter.search("phone", "03001234567", {})
+    assert success is False
+    assert "only supports email" in note
+

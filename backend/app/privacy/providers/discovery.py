@@ -134,6 +134,98 @@ class ExposureCheckDiscoveryAdapter(BaseDiscoveryProvider):
             return [], False, f"Exposure check error: {str(e)[:120]}"
 
 
+class HoleheRegistrationDiscoveryAdapter(BaseDiscoveryProvider):
+    """
+    Open-Source Intelligence (OSINT) Account Registration Adapter (Holehe).
+    Queries public endpoints of 35+ major online services without attempting password recovery
+    or account modification to verify if target email is registered.
+    """
+    def __init__(self):
+        super().__init__(
+            provider_id="holehe_registration",
+            provider_name="Account Registration Intelligence (Holehe OSINT)",
+            supported_identifiers=["email"]
+        )
+
+    def is_configured(self) -> bool:
+        try:
+            import holehe
+            return True
+        except ImportError:
+            return False
+
+    def search(self, identifier_type: str, normalized_value: str, metadata: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], bool, str]:
+        if identifier_type != "email":
+            return [], False, "Holehe registration checking only supports email identifiers."
+
+        if not self.is_configured():
+            return [], False, "Holehe OSINT module is not installed."
+
+        try:
+            import trio
+            import httpx
+            from holehe.core import import_submodules, get_functions, launch_module
+        except Exception as e:
+            return [], False, f"Holehe dependency load error: {e}"
+
+        class DummyArgs:
+            onlyused = True
+            nocolor = True
+            noclear = True
+            nopasswordrecovery = True
+            csvoutput = False
+            timeout = 3
+
+        TARGET_SITES = {
+            'adobe', 'amazon', 'atlassian', 'bitmoji', 'codecademy', 'codepen', 'discord',
+            'docker', 'ebay', 'eventbrite', 'evernote', 'firefox', 'flickr', 'freelancer',
+            'github', 'google', 'gravatar', 'hubspot', 'imgur', 'instagram', 'lastfm',
+            'lastpass', 'nike', 'office365', 'patreon', 'pinterest', 'protonmail', 'quora',
+            'replit', 'snapchat', 'soundcloud', 'spotify', 'strava', 'tumblr', 'twitter',
+            'venmo', 'wattpad', 'wordpress', 'yahoo', 'zoho'
+        }
+
+        results = []
+        try:
+            modules = import_submodules('holehe.modules')
+            args = DummyArgs()
+            all_funcs = get_functions(modules, args)
+            selected_funcs = [f for f in all_funcs if f.__name__.lower() in TARGET_SITES]
+
+            out = []
+            async def _run():
+                with trio.move_on_after(6.0):
+                    client = httpx.AsyncClient(timeout=2.5)
+                    async with trio.open_nursery() as nursery:
+                        for func in selected_funcs:
+                            nursery.start_soon(launch_module, func, normalized_value, client, out)
+                    await client.aclose()
+
+            trio.run(_run)
+
+            for item in out:
+                if item.get("exists") is True:
+                    raw_name = item.get("name", "Platform")
+                    display_title = raw_name.capitalize()
+                    if raw_name == "twitter": display_title = "Twitter / X"
+                    elif raw_name == "office365": display_title = "Microsoft Office 365"
+                    elif raw_name == "lastpass": display_title = "LastPass Password Vault"
+                    elif raw_name == "github": display_title = "GitHub"
+
+                    results.append({
+                        "source_name": display_title,
+                        "source_url": f"https://{raw_name}.com",
+                        "snippet": f"Account registration signal detected on {display_title}. Associated email address is verified as registered on this platform.",
+                        "source_type": "OSINT_REGISTRATION_CHECK",
+                        "category": ExposureCategory.ACCOUNT_REGISTRATION,
+                        "raw_service": raw_name
+                    })
+
+            return results, True, f"Probed {len(out)} platforms. Identified {len(results)} active account registrations."
+        except Exception as e:
+            return [], False, f"Holehe registration probe error: {str(e)[:120]}"
+
+
 class LocalVaultDiscoveryAdapter(BaseDiscoveryProvider):
     """
     Local Case Vault Discovery Provider:
@@ -186,9 +278,11 @@ class DiscoveryManager:
     def __init__(self):
         self.providers = [
             LocalVaultDiscoveryAdapter(),
+            HoleheRegistrationDiscoveryAdapter(),
             PublicSearchDiscoveryAdapter(),
             ExposureCheckDiscoveryAdapter()
         ]
+
 
     def get_providers_status(self) -> List[Dict[str, Any]]:
         statuses = []

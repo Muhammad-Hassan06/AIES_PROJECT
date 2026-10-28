@@ -280,11 +280,17 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
                   className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-teal-700 shadow-xs"
                 />
               </div>
+              {url.includes('@') && !url.includes('/') && (
+                <div className="p-2.5 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-900 flex items-center justify-between">
+                  <span>Detected email address. To investigate exposed accounts, breach history, and spam sources, open the <strong>Digital Privacy</strong> center.</span>
+                </div>
+              )}
               <p className="text-[11px] text-slate-400">
                 CyberShield AI safely parses URL structural signals without auto-opening or fetching malicious code.
               </p>
             </div>
           )}
+
 
           {(activeTab === 'message' || activeTab === 'email') && (
             <div className="space-y-3">
