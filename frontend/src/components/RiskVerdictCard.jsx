@@ -24,9 +24,33 @@ export default function RiskVerdictCard({
   const isInsufficient = riskLevel === 'INSUFFICIENT_EVIDENCE';
   const confidence = report.model_confidence || 0;
   const confidencePct = Math.round(confidence * 100);
-  const fraudRiskScore = report.fraud_risk_score !== undefined && report.fraud_risk_score !== null
-    ? report.fraud_risk_score
-    : confidencePct;
+
+  // Compute unambiguous Fraud Risk Score (0-100 scale)
+  let fraudRiskScore = 0;
+  if (isInsufficient) {
+    fraudRiskScore = 0;
+  } else if (report.fraud_risk_score !== undefined && report.fraud_risk_score !== null) {
+    fraudRiskScore = Math.max(0, Math.min(100, Math.round(report.fraud_risk_score)));
+  } else {
+    // Backward-compatible safe derivation for older records lacking fraud_risk_score:
+    switch (riskLevel) {
+      case 'CRITICAL':
+        fraudRiskScore = Math.max(90, confidencePct);
+        break;
+      case 'HIGH':
+        fraudRiskScore = Math.max(75, confidencePct);
+        break;
+      case 'MEDIUM':
+        fraudRiskScore = 50;
+        break;
+      case 'LOW':
+      default:
+        // For Likely Legitimate, fraud risk is 0 (or residual unverified margin)
+        fraudRiskScore = 0;
+        break;
+    }
+  }
+
   const predictedClass = report.predicted_class || (
     isInsufficient
       ? 'Insufficient Evidence / Needs Review'

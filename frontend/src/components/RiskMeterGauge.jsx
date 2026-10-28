@@ -6,11 +6,12 @@ export default function RiskMeterGauge({ score = 0, level = 'LOW', size = 140, l
   const normLevel = (level || 'LOW').toUpperCase();
   const isInsufficient = normLevel === 'INSUFFICIENT_EVIDENCE';
   
-  // Normalize score: if score is > 1, assume 0-100 scale, else 0-1
+  // Normalize score: safely support both 0-100 integer scores and 0.0-1.0 float probabilities
   const rawScore = typeof score === 'number' ? score : 0;
+  const isFraction = rawScore > 0 && rawScore <= 1.0 && rawScore % 1 !== 0;
   const targetPct = isInsufficient 
     ? 0 
-    : Math.min(100, Math.max(0, rawScore > 1 ? Math.round(rawScore) : Math.round(rawScore * 100)));
+    : Math.min(100, Math.max(0, Math.round(isFraction ? rawScore * 100 : rawScore)));
 
   useEffect(() => {
     const prefersReduced = typeof window !== 'undefined' && window.matchMedia
