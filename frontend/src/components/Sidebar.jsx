@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   SearchCheck, FolderArchive, Cpu, BookOpen, 
   TrendingUp, Database, GraduationCap, ShieldCheck, 
-  Settings, ChevronRight, MoreHorizontal, X, Layers
+  Settings, ChevronRight, MoreHorizontal, X, Layers, EyeOff
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -10,6 +10,7 @@ export const NAV_ITEMS = [
   { id: 'investigate', labelKey: 'nav_investigate', defaultLabel: 'Investigate', icon: SearchCheck },
   { id: 'cases', labelKey: 'nav_cases', defaultLabel: 'Cases', icon: FolderArchive },
   { id: 'agent', labelKey: 'nav_agent', defaultLabel: 'Agent Console', icon: Cpu },
+  { id: 'privacy', labelKey: 'nav_privacy', defaultLabel: 'Digital Privacy', icon: EyeOff },
   { id: 'rag', labelKey: 'nav_rag', defaultLabel: 'Knowledge Base', icon: BookOpen },
   { id: 'trends', labelKey: 'nav_trends', defaultLabel: 'Threat Trends', icon: TrendingUp },
   { id: 'models', labelKey: 'nav_models', defaultLabel: 'Models & Data', icon: Database },
@@ -18,6 +19,7 @@ export const NAV_ITEMS = [
   { id: 'safety', labelKey: 'nav_safety', defaultLabel: 'Safety Center', icon: ShieldCheck },
   { id: 'settings', labelKey: 'nav_settings', defaultLabel: 'Settings', icon: Settings },
 ];
+
 
 export default function Sidebar({ activeTab, onSelectTab }) {
   const { t } = useLanguage();

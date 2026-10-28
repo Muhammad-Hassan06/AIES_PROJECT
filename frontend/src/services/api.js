@@ -1,3 +1,5 @@
+export const DEFAULT_RENDER_URL = 'https://aies-project-hqwo.onrender.com';
+
 export function getApiBase() {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('cybershield_api_base_url');
@@ -6,8 +8,16 @@ export function getApiBase() {
     }
   }
   const raw = import.meta.env.VITE_API_BASE_URL;
-  return raw && raw.trim() ? `${raw.trim().replace(/\/+$/, '')}/api` : '/api';
+  if (raw && raw.trim()) {
+    return `${raw.trim().replace(/\/+$/, '')}/api`;
+  }
+  // On cloud deployment (e.g. Vercel, non-localhost), default automatically to verified Render backend
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${DEFAULT_RENDER_URL}/api`;
+  }
+  return '/api';
 }
+
 
 async function request(endpoint, options = {}) {
   const base = getApiBase();
@@ -150,3 +160,65 @@ export async function runBatchScan(items) {
     body: JSON.stringify({ items }),
   });
 }
+
+// ---------------- Digital Privacy & Spam Defense (DFSD) ----------------
+
+export async function createPrivacyInvestigation(payload) {
+  return request('/privacy/investigations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listPrivacyInvestigations(limit = 50) {
+  return request(`/privacy/investigations?limit=${limit}`);
+}
+
+export async function getPrivacyInvestigation(investigationId) {
+  return request(`/privacy/investigations/${investigationId}`);
+}
+
+export async function getPrivacyFindings(investigationId) {
+  return request(`/privacy/investigations/${investigationId}/findings`);
+}
+
+export async function reanalyzePrivacyInvestigation(investigationId) {
+  return request(`/privacy/investigations/${investigationId}/reanalyze`, {
+    method: 'POST',
+  });
+}
+
+export async function deletePrivacyInvestigation(investigationId) {
+  return request(`/privacy/investigations/${investigationId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function listPrivacyRemediationTasks(investigationId = null) {
+  const q = investigationId ? `?investigation_id=${investigationId}` : '';
+  return request(`/privacy/remediation${q}`);
+}
+
+export async function preparePrivacyRemediation(taskId) {
+  return request(`/privacy/remediation/${taskId}/prepare`, {
+    method: 'POST',
+  });
+}
+
+export async function executePrivacyRemediation(taskId, action = 'submit', evidenceNote = '') {
+  return request(`/privacy/remediation/${taskId}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, evidence_note: evidenceNote }),
+  });
+}
+
+export async function getPrivacyProvidersStatus() {
+  return request('/privacy/providers/status');
+}
+
+export async function getPrivacyOverview() {
+  return request('/privacy/overview');
+}
+

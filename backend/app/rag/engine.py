@@ -6,10 +6,10 @@ from typing import List, Dict, Any, Optional, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.core.config import settings
+from app.core.config import settings, get_data_dir
 from app.rag.eval_data import RAG_EVALUATION_DATASET
 
-CORPUS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../backend/data/corpus"))
+CORPUS_DIR = os.path.join(get_data_dir(), "corpus")
 
 class GroundedRAGEngine:
     def __init__(self):
@@ -93,23 +93,39 @@ class GroundedRAGEngine:
         q_vec = self.vectorizer.transform([query])
         sims = cosine_similarity(q_vec, self.tfidf_matrix).flatten()
 
-        ranked_indices = sims.argsort()[::-1]
+        # Check for explicit statutory section mentions (e.g. "Section 14", "Sec 13")
+        import re
+        sec_match = re.search(r'\b(?:section|sec)\s*([0-9]{1,2})\b', query, re.IGNORECASE)
+        has_peca = bool(re.search(r'\bpeca\b', query, re.IGNORECASE))
+        target_sec = sec_match.group(1) if sec_match else None
+
+        # Apply exact section / legal statute relevance boost
+        adjusted_sims = sims.copy()
+        for idx, chunk in enumerate(self.corpus_chunks):
+            if target_sec and str(chunk.get("section_number")) == target_sec:
+                if has_peca and "peca" in chunk.get("doc_id", "").lower():
+                    adjusted_sims[idx] += 0.25
+                else:
+                    adjusted_sims[idx] += 0.15
+
+        ranked_indices = adjusted_sims.argsort()[::-1]
         results = []
 
-        max_score = float(sims[ranked_indices[0]]) if len(ranked_indices) > 0 else 0.0
+        max_score = float(adjusted_sims[ranked_indices[0]]) if len(ranked_indices) > 0 else 0.0
         is_grounded = max_score >= threshold
 
         if not is_grounded:
             return [], False
 
         for idx in ranked_indices[:top_k]:
-            score = float(sims[idx])
+            score = float(adjusted_sims[idx])
             if score >= threshold:
                 chunk = dict(self.corpus_chunks[idx])
                 chunk["relevance_score"] = round(score, 4)
                 results.append(chunk)
 
         return results, True
+
 
     def query(self, query: str, language: Optional[str] = "en") -> Dict[str, Any]:
         """Alias for answer_query for convenient API invocation."""

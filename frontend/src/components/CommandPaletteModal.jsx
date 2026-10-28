@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Command, FolderArchive, SearchCheck, 
   Cpu, BookOpen, TrendingUp, Database, GraduationCap, 
-  ShieldCheck, Settings, Play, ArrowRight, X 
+  ShieldCheck, Settings, Play, ArrowRight, X, EyeOff 
 } from 'lucide-react';
+
 import { DEMO_SCENARIOS } from './DemoScenarioCards';
 
 export default function CommandPaletteModal({ 
@@ -65,8 +66,10 @@ export default function CommandPaletteModal({
     { id: 'tab-models', title: 'Go to Models & Data Provenance', category: 'Navigation', icon: Database, action: () => onNavigateTab('models') },
     { id: 'tab-awareness', title: 'Go to Awareness Academy (Quiz & Lessons)', category: 'Navigation', icon: GraduationCap, action: () => onNavigateTab('awareness') },
     { id: 'tab-safety', title: 'Go to Official Safety Center (NCCIA & PKCERT)', category: 'Navigation', icon: ShieldCheck, action: () => onNavigateTab('safety') },
+    { id: 'tab-privacy', title: 'Go to Digital Privacy & Spam Defense', category: 'Navigation', icon: EyeOff, action: () => onNavigateTab('privacy') },
     { id: 'tab-settings', title: 'Go to Settings & Retention', category: 'Navigation', icon: Settings, action: () => onNavigateTab('settings') },
   ];
+
 
   const scenarioActions = DEMO_SCENARIOS.map(sc => ({
     id: `scenario-${sc.id}`,

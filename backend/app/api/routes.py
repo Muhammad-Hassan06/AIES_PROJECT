@@ -1,8 +1,9 @@
 import json
 import os
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import List, Dict, Any, Optional
 
+from app.core.config import settings, get_data_dir
 from app.models.schemas import (
     InvestigationCreateRequest, InvestigationReport, InvestigationType,
     URLAnalysisResult, NLPAnalysisResult, ScreenshotAnalysisResult,
@@ -13,7 +14,6 @@ from app.ml.url_classifier import url_classifier
 from app.nlp.text_classifier import text_classifier
 from app.vision.ocr_engine import ocr_engine
 from app.rules.expert_system import expert_engine
-from app.core.config import settings
 from app.db.database import (
     save_investigation, get_investigation_by_id,
     list_recent_investigations, delete_investigation,
@@ -22,7 +22,8 @@ from app.db.database import (
 
 router = APIRouter()
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../backend/data"))
+DATA_DIR = get_data_dir()
+
 
 @router.post("/investigations", response_model=InvestigationReport)
 def create_investigation(req: InvestigationCreateRequest):
@@ -462,3 +463,90 @@ def health_check():
         "gemini_api_configured": bool(settings.GEMINI_API_KEY),
         "database_connected": True
     }
+
+
+# ==============================================================================
+# DIGITAL PRIVACY & SPAM DEFENSE (DFSD) ENDPOINTS
+# ==============================================================================
+from app.privacy.schemas import PrivacyInvestigationRequest
+from app.privacy.service import privacy_service
+
+@router.post("/privacy/investigations")
+def create_privacy_investigation_endpoint(req: PrivacyInvestigationRequest):
+    """Initiates an 8-agent orchestrated privacy and spam source investigation."""
+    try:
+        return privacy_service.create_investigation(req)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Privacy investigation failed: {str(e)}")
+
+@router.get("/privacy/investigations")
+def list_privacy_investigations_endpoint(limit: int = 50):
+    """Retrieves recent privacy investigations from the local vault."""
+    return privacy_service.list_investigations(limit=limit)
+
+@router.get("/privacy/investigations/{investigation_id}")
+def get_privacy_investigation_endpoint(investigation_id: str):
+    """Retrieves full details of a specific privacy investigation."""
+    inv = privacy_service.get_investigation(investigation_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Investigation record not found")
+    return inv
+
+@router.get("/privacy/investigations/{investigation_id}/findings")
+def get_privacy_findings_endpoint(investigation_id: str):
+    """Retrieves all structured exposure findings for an investigation."""
+    return privacy_service.get_findings_for_investigation(investigation_id)
+
+@router.post("/privacy/investigations/{investigation_id}/reanalyze")
+def reanalyze_privacy_investigation_endpoint(investigation_id: str):
+    """Re-analyzes an existing investigation with updated rules and models."""
+    res = privacy_service.reanalyze_investigation(investigation_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Investigation record not found for re-analysis")
+    return res
+
+@router.delete("/privacy/investigations/{investigation_id}")
+def delete_privacy_investigation_endpoint(investigation_id: str):
+    """Permanently purges an investigation record, its findings, and remediation tasks."""
+    success = privacy_service.delete_investigation(investigation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Investigation not found or already deleted")
+    return {"status": "deleted", "investigation_id": investigation_id}
+
+@router.get("/privacy/remediation")
+def list_privacy_remediation_tasks_endpoint(investigation_id: Optional[str] = None):
+    """Lists all privacy remediation tasks, optionally filtered by investigation_id."""
+    return privacy_service.list_remediation_tasks(investigation_id=investigation_id)
+
+@router.post("/privacy/remediation/{task_id}/prepare")
+def prepare_privacy_remediation_endpoint(task_id: str):
+    """Prepares personalized deletion draft or opt-out instructions for a task."""
+    task = privacy_service.prepare_remediation_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Remediation task not found")
+    return task
+
+@router.post("/privacy/remediation/{task_id}/execute")
+def execute_privacy_remediation_endpoint(task_id: str, payload: Dict[str, Any] = Body(...)):
+    """
+    Updates the execution status of a remediation task.
+    action: submit, verify, reject, manual_instructions
+    evidence_note: optional documentation text
+    """
+    action = payload.get("action", "submit")
+    note = payload.get("evidence_note", "")
+    task = privacy_service.execute_remediation_task(task_id, action=action, evidence_note=note)
+    if not task:
+        raise HTTPException(status_code=404, detail="Remediation task not found")
+    return task
+
+@router.get("/privacy/providers/status")
+def get_privacy_providers_status_endpoint():
+    """Returns real configuration, health, and availability status of all LLM and discovery providers."""
+    return privacy_service.get_providers_status()
+
+@router.get("/privacy/overview")
+def get_privacy_overview_endpoint():
+    """Returns aggregate exposure and remediation metrics for the Digital Privacy dashboard."""
+    return privacy_service.get_overview_metrics()
+

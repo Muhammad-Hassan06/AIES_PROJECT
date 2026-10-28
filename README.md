@@ -335,7 +335,71 @@ In the **Investigation Studio**, 5 pre-loaded realistic scenarios are ready for 
 
 ---
 
-## 10. Limitations & Future Extensions
+## 10. Digital Footprint & Spam Defense Agent (DFSD)
+
+The **Digital Footprint & Spam Defense Agent (DFSD)** extends CyberShield AI into a unified privacy defense platform. It investigates where user email addresses and Pakistani mobile numbers may be exposed in breach records or public search indices, unmasks the origin of unwanted promotional spam messages and robocalls, and formulates evidence-backed, human-in-the-loop privacy remediation plans.
+
+### 10.1 8-Agent Orchestrated Privacy Pipeline
+1. **Agent 1: Consent & Intake Agent** — Validates investigation type, enforces explicit authorization and consent checkboxes, normalizes Pakistani mobile numbers (`03XX-XXXXXXX`, `+923XXXXXXXXX`, `923XXXXXXXXX`) to E.164, maps carrier prefixes (Jazz, Telenor, Zong, Ufone, Scom), and generates keyed HMAC-SHA256 privacy identifiers.
+2. **Agent 2: Discovery Planning Agent** — Inspects configured providers, checks health and credentials, transparently skips unconfigured external search engines, and builds source-specific execution plans.
+3. **Agent 3: Public Exposure Discovery Agent** — Executes searches across permitted public web endpoints, local case archives, and exposure notification registries without bypassing access controls or scraping restricted portals.
+4. **Agent 4: Spam Intelligence Agent** — Analyzes submitted messages, headers, call-log bursts, sender domains, and screenshots using the existing NLP, URL, and OCR pipelines to detect Pakistani institutional impersonation (HBL, Meezan, JazzCash, BISP, Pakistan Post).
+5. **Agent 5: Evidence Verification Agent** — Validates whether findings are directly supported by source text, removes duplicate findings, and distinguishes direct breach evidence from unverified search index mentions.
+6. **Agent 6: Privacy Risk Assessment Agent** — Evaluates exposure severity, data sensitivity, and recency using explicit expert rules alongside deterministic scoring models.
+7. **Agent 7: Remediation Planning Agent** — Formulates step-by-step remediation tasks (legitimate unsubscribes, device blocking, official carrier spam reporting via PTA 9000, and personalized GDPR/PECA data deletion drafts).
+8. **Agent 8: Follow-up & Reporting Agent** — Compiles structured audit dossiers, tracks remediation task states (`NOT_STARTED`, `INSTRUCTIONS_AVAILABLE`, `REQUEST_DRAFTED`, `AWAITING_USER_ACTION`, `REQUEST_SUBMITTED`, `REMOVAL_VERIFIED`), and maintains immutable case history.
+
+### 10.2 Deterministic Privacy Expert Rules (`RULE_DF_01` – `RULE_DF_12`)
+- **`RULE_DF_01`**: Verified public exposure of personal identifiers mandates documented remediation.
+- **`RULE_DF_02`**: Exposure involving email and plaintext passwords triggers urgent credential protection guidance without retaining passwords.
+- **`RULE_DF_03`**: Messages soliciting OTPs, PINs, or passwords trigger high-priority credential harvesting alarms.
+- **`RULE_DF_04`**: Search index matches without independent verification must never be classified as confirmed website registrations.
+- **`RULE_DF_05`**: Missing or unavailable discovery sources are transparently reported as *Unknown/Skipped*, never *Clean*.
+- **`RULE_DF_06`**: Legitimate commercial marketing communications must not be conflated with cyberattacks solely because they are unwanted.
+- **`RULE_DF_07`**: Data-removal request submission is tracked as *Request Submitted*, never prematurely marked as *Removal Verified*.
+- **`RULE_DF_08`**: Successful sender blocking does not establish that underlying data held by third parties has been expunged.
+- **`RULE_DF_09`**: Overlapping sources are deduplicated to prevent inflated exposure counts.
+- **`RULE_DF_10`**: AI-generated text claims without corroborating source text cannot become verified findings.
+- **`RULE_DF_11`**: Data exposure alerts do not constitute proof of active identity theft.
+- **`RULE_DF_12`**: Conflicting evidence automatically lowers verification status and triggers explanatory audit notes.
+
+### 10.3 Multi-Provider LLM Abstraction & Deterministic Fallback
+- **Supported Providers**: Google Gemini 2.5 Flash, Groq LLaMA 3.3 70B, OpenAI GPT-4o-mini, Anthropic Claude 3.5 Sonnet.
+- **Auto-Selection**: When `LLM_PROVIDER=auto`, the system checks configured credentials, tests health, selects the highest-priority reachable provider, and gracefully falls back to 100% deterministic local symbolic reasoning if all external APIs are unreachable or unconfigured.
+
+---
+
+## 11. Model & Dataset Transparency Disclosures
+
+### 11.1 URL Phishing Classifier
+- **Model**: Random Forest Classifier (100 estimators, max depth 12, balanced class weights).
+- **Dataset**: UCI Machine Learning Repository PhiUSIIL Phishing URL Dataset ([UCI #967](https://archive.ics.uci.edu/dataset/967/phiusil-phishing-url-dataset)), augmented with synthetic and curated Pakistani phishing lures (HBL, Meezan, JazzCash, Easypaisa, BISP 8171, Pakistan Post, FBR tax refund).
+- **Training Method**: 80/20 stratified train/test split. 15 structural and lexical features extracted in pure Python without external web lookups.
+- **Known Limitations**: Lexical models evaluate URL structure and cannot detect compromised legitimate domains serving phishing content via dynamic client-side scripts.
+
+### 11.2 Social Engineering NLP Classifier
+- **Model**: Multinomial Naive Bayes with sublinear TF-IDF (unigram & bigram tokenization, max 3,000 features).
+- **Dataset**: Curated Pakistani cyber-threat corpus containing 500+ samples of verified SMS/WhatsApp lures, lottery frauds, banking alerts, OTP extraction prompts, and genuine transactional messages in English, Urdu, and Roman Urdu.
+- **Training Method**: Stratified cross-validation with custom token-level span attribution for forensic highlight visualization.
+- **Known Limitations**: Highly colloquial or phonetic Roman Urdu slang variations require ongoing lexicon expansion.
+
+### 11.3 Grounded Legal & Regulatory RAG Engine
+- **Engine**: Local TF-IDF statutory retrieval engine with statutory section regex boosting (`Section 14`, `Section 16`, etc.) and calibrated cosine similarity gating (abstention threshold 0.15).
+- **Corpus**: Prevention of Electronic Crimes Act (PECA 2016), State Bank of Pakistan (SBP) Consumer Protection Directives (CPD-02), PKCERT Advisories, and PTA Spam Prevention Regulations.
+- **Behavior**: Retrieves authoritative statutory text for valid legal queries and strictly abstains on irrelevant non-cyber questions.
+
+---
+
+## 12. Cloud Deployment & Live Render Backend Integration
+
+The project is pre-configured with a live production backend hosted on Render:
+- **Live Backend URL**: `https://aies-project-hqwo.onrender.com/`
+- **Frontend Automatic Routing**: `frontend/src/services/api.js` automatically uses this Render URL when deployed to production or non-localhost domains. Users are never repeatedly asked for the backend URL.
+- **Vercel Reverse Proxy**: `vercel.json` provides direct `/api/(.*)` rewrites to the Render cloud backend, avoiding CORS preflight delays and ensuring seamless cross-origin communication.
+
+---
+
+## 13. Limitations & Future Extensions
 
 - **Static vs Dynamic Web Analysis**: CyberShield AI performs static lexical and structural analysis of URLs. To avoid SSRF and malicious payload execution, live in-browser DOM and JavaScript execution is not performed.
 - **Sender Verification**: NLP models evaluate message semantics and cannot independently cryptographically verify SS7 telecom headers or SIM card ownership without telco carrier integration.
@@ -343,9 +407,9 @@ In the **Investigation Studio**, 5 pre-loaded realistic scenarios are ready for 
 
 ---
 
-## 11. Academic Project Metadata
+## 14. Academic Project Metadata
 
 - **Course**: Artificial Intelligence and Expert Systems (AIES)
-- **Project**: Semester Project 3 — CyberShield AI
-- **Technologies**: Python 3.14, FastAPI, Scikit-Learn, PyTorch/Transformers, Pillow, SQLite, React 19, Vite, Tailwind CSS, Lucide Icons, Recharts, Vitest.
+- **Project**: Semester Project — CyberShield AI with Digital Footprint & Spam Defense (DFSD)
+- **Technologies**: Python 3.14, FastAPI, Scikit-Learn, PyTorch, Pillow, SQLite, React 19, Vite, Tailwind CSS, Lucide Icons, Recharts, Vitest.
 

@@ -14,6 +14,7 @@ import ModelsDataPage from './pages/ModelsDataPage';
 import AwarenessAcademyPage from './pages/AwarenessAcademyPage';
 import BatchComparePage from './pages/BatchComparePage';
 import SafetyCenterPage from './pages/SafetyCenterPage';
+import DigitalPrivacyPage from './pages/DigitalPrivacyPage';
 import SettingsPage from './pages/SettingsPage';
 
 import { LanguageProvider } from './context/LanguageContext';
@@ -163,18 +164,19 @@ function AppContent() {
       {healthStatus?.status !== 'healthy' && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-950 px-4 py-2 text-xs flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="font-bold">⚠️ Cloud Backend Not Connected:</span>
-            <span>Your frontend is running on Vercel, but no backend is linked yet.</span>
+            <span className="font-bold">⚠️ Cloud Backend Connecting:</span>
+            <span>Connecting to live Render cloud backend (https://aies-project-hqwo.onrender.com). If service is waking up, please allow ~30s.</span>
           </div>
           <button
             type="button"
             onClick={() => setActiveTab('settings')}
             className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 rounded-md font-bold text-amber-900 cursor-pointer transition-colors shrink-0 ml-3"
           >
-            Connect Render in Settings →
+            Settings →
           </button>
         </div>
       )}
+
 
       {/* Main Studio Workspace */}
       <div className="flex-1 flex overflow-hidden">
@@ -233,9 +235,14 @@ function AppContent() {
               <SafetyCenterPage />
             )}
 
+            {activeTab === 'privacy' && (
+              <DigitalPrivacyPage />
+            )}
+
             {activeTab === 'settings' && (
               <SettingsPage />
             )}
+
           </div>
         </main>
       </div>

@@ -2,8 +2,9 @@ import sqlite3
 import json
 import os
 from typing import List, Dict, Any, Optional
+from app.core.config import get_data_dir
 
-DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../backend/data/cybershield.db"))
+DB_PATH = os.path.join(get_data_dir(), "cybershield.db")
 
 def get_db_connection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -40,6 +41,59 @@ def init_db():
             action TEXT NOT NULL,
             risk_level TEXT,
             latency_ms REAL
+        )
+    """)
+
+    # Digital Footprint & Privacy Remediation Module Tables
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS privacy_investigations (
+            investigation_id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            investigation_type TEXT NOT NULL,
+            target_masked TEXT NOT NULL,
+            consent_given INTEGER NOT NULL,
+            execution_status TEXT NOT NULL,
+            risk_level TEXT NOT NULL,
+            risk_score REAL NOT NULL,
+            full_response_json TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS privacy_findings (
+            finding_id TEXT PRIMARY KEY,
+            investigation_id TEXT NOT NULL,
+            identifier_type TEXT NOT NULL,
+            exposure_category TEXT NOT NULL,
+            source_name TEXT NOT NULL,
+            source_url TEXT,
+            source_type TEXT NOT NULL,
+            discovered_at TEXT NOT NULL,
+            verification_status TEXT NOT NULL,
+            confidence_score REAL NOT NULL,
+            risk_level TEXT NOT NULL,
+            recommended_action TEXT NOT NULL,
+            removal_status TEXT NOT NULL,
+            full_finding_json TEXT NOT NULL,
+            FOREIGN KEY (investigation_id) REFERENCES privacy_investigations(investigation_id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS privacy_remediation_tasks (
+            task_id TEXT PRIMARY KEY,
+            investigation_id TEXT NOT NULL,
+            finding_id TEXT,
+            action_type TEXT NOT NULL,
+            action_status TEXT NOT NULL,
+            target_name TEXT NOT NULL,
+            target_identifier_masked TEXT NOT NULL,
+            official_portal_url TEXT,
+            evidence_of_completion TEXT,
+            created_at TEXT NOT NULL,
+            last_updated_at TEXT NOT NULL,
+            full_task_json TEXT NOT NULL,
+            FOREIGN KEY (investigation_id) REFERENCES privacy_investigations(investigation_id) ON DELETE CASCADE
         )
     """)
     conn.commit()
@@ -294,4 +348,257 @@ def get_threat_trends(days: Optional[int] = None) -> Dict[str, Any]:
         "top_rules": top_rules,
         "top_categories": top_categories,
         "top_institutions": top_institutions
+    }
+
+
+# ==============================================================================
+# DIGITAL PRIVACY & SPAM DEFENSE DATABASE OPERATIONS
+# ==============================================================================
+
+def save_privacy_investigation(resp_dict: Dict[str, Any]) -> str:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    inv_id = resp_dict["investigation_id"]
+    cursor.execute("""
+        INSERT OR REPLACE INTO privacy_investigations (
+            investigation_id, created_at, investigation_type, target_masked,
+            consent_given, execution_status, risk_level, risk_score, full_response_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        inv_id,
+        resp_dict["created_at"],
+        resp_dict["investigation_type"],
+        resp_dict["target_masked"],
+        1 if resp_dict["consent_given"] else 0,
+        resp_dict["execution_status"],
+        resp_dict["risk_level"],
+        resp_dict["risk_score"],
+        json.dumps(resp_dict)
+    ))
+
+    # Save findings
+    for f in resp_dict.get("findings", []):
+        f_dict = f if isinstance(f, dict) else f.model_dump()
+        cursor.execute("""
+            INSERT OR REPLACE INTO privacy_findings (
+                finding_id, investigation_id, identifier_type, exposure_category,
+                source_name, source_url, source_type, discovered_at,
+                verification_status, confidence_score, risk_level,
+                recommended_action, removal_status, full_finding_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f_dict["finding_id"],
+            inv_id,
+            f_dict["identifier_type"],
+            f_dict["exposure_category"],
+            f_dict["source_name"],
+            f_dict.get("source_url"),
+            f_dict["source_type"],
+            f_dict["discovered_at"],
+            f_dict["verification_status"],
+            f_dict["confidence_score"],
+            f_dict["risk_level"],
+            f_dict["recommended_action"],
+            f_dict.get("removal_status", "NOT_STARTED"),
+            json.dumps(f_dict)
+        ))
+
+    # Save remediation tasks
+    for t in resp_dict.get("remediation_tasks", []):
+        t_dict = t if isinstance(t, dict) else t.model_dump()
+        cursor.execute("""
+            INSERT OR REPLACE INTO privacy_remediation_tasks (
+                task_id, investigation_id, finding_id, action_type,
+                action_status, target_name, target_identifier_masked,
+                official_portal_url, evidence_of_completion, created_at,
+                last_updated_at, full_task_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            t_dict["task_id"],
+            inv_id,
+            t_dict.get("finding_id"),
+            t_dict["action_type"],
+            t_dict["action_status"],
+            t_dict["target_name"],
+            t_dict["target_identifier_masked"],
+            t_dict.get("official_portal_url"),
+            t_dict.get("evidence_of_completion"),
+            t_dict["created_at"],
+            t_dict["last_updated_at"],
+            json.dumps(t_dict)
+        ))
+
+    conn.commit()
+    conn.close()
+    return inv_id
+
+def get_privacy_investigation(investigation_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_response_json FROM privacy_investigations WHERE investigation_id = ?", (investigation_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["full_response_json"])
+    return None
+
+def list_privacy_investigations(limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT investigation_id, created_at, investigation_type, target_masked,
+               consent_given, execution_status, risk_level, risk_score, full_response_json
+        FROM privacy_investigations
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        try:
+            full = json.loads(r["full_response_json"])
+            results.append(full)
+        except Exception:
+            results.append(dict(r))
+    return results
+
+def delete_privacy_investigation(investigation_id: str) -> bool:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM privacy_remediation_tasks WHERE investigation_id = ?", (investigation_id,))
+    cursor.execute("DELETE FROM privacy_findings WHERE investigation_id = ?", (investigation_id,))
+    cursor.execute("DELETE FROM privacy_investigations WHERE investigation_id = ?", (investigation_id,))
+    changes = conn.total_changes
+    conn.commit()
+    conn.close()
+    return changes > 0
+
+def get_privacy_findings(investigation_id: str) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_finding_json FROM privacy_findings WHERE investigation_id = ?", (investigation_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [json.loads(r["full_finding_json"]) for r in rows]
+
+def update_privacy_finding_status(finding_id: str, removal_status: str) -> bool:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_finding_json FROM privacy_findings WHERE finding_id = ?", (finding_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    f_data = json.loads(row["full_finding_json"])
+    f_data["removal_status"] = removal_status
+    cursor.execute("""
+        UPDATE privacy_findings
+        SET removal_status = ?, full_finding_json = ?
+        WHERE finding_id = ?
+    """, (removal_status, json.dumps(f_data), finding_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def list_privacy_remediation_tasks(investigation_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if investigation_id:
+        cursor.execute("SELECT full_task_json FROM privacy_remediation_tasks WHERE investigation_id = ? ORDER BY created_at DESC", (investigation_id,))
+    else:
+        cursor.execute("SELECT full_task_json FROM privacy_remediation_tasks ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [json.loads(r["full_task_json"]) for r in rows]
+
+def get_privacy_remediation_task(task_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_task_json FROM privacy_remediation_tasks WHERE task_id = ?", (task_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["full_task_json"])
+    return None
+
+def update_privacy_remediation_task(
+    task_id: str,
+    action_status: str,
+    evidence_of_completion: Optional[str] = None
+) -> bool:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_task_json FROM privacy_remediation_tasks WHERE task_id = ?", (task_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat() if "datetime" in globals() else ""
+    if not now_utc:
+        import datetime as dt
+        now_utc = dt.datetime.now(dt.timezone.utc).isoformat()
+
+    t_data = json.loads(row["full_task_json"])
+    t_data["action_status"] = action_status
+    t_data["last_updated_at"] = now_utc
+    if evidence_of_completion:
+        t_data["evidence_of_completion"] = evidence_of_completion
+
+    cursor.execute("""
+        UPDATE privacy_remediation_tasks
+        SET action_status = ?, evidence_of_completion = ?, last_updated_at = ?, full_task_json = ?
+        WHERE task_id = ?
+    """, (action_status, evidence_of_completion, now_utc, json.dumps(t_data), task_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_privacy_overview_metrics() -> Dict[str, Any]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM privacy_investigations")
+    total_inv = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM privacy_findings WHERE verification_status = 'VERIFIED'")
+    verified_findings = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM privacy_findings WHERE verification_status != 'VERIFIED'")
+    potential_matches = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM privacy_remediation_tasks WHERE action_status NOT IN ('REMOVAL_VERIFIED', 'COMPLETED')")
+    open_tasks = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM privacy_remediation_tasks WHERE action_status IN ('REMOVAL_VERIFIED', 'COMPLETED', 'REQUEST_SUBMITTED')")
+    completed_actions = cursor.fetchone()[0]
+
+    cursor.execute("SELECT created_at FROM privacy_investigations ORDER BY created_at DESC LIMIT 1")
+    latest_row = cursor.fetchone()
+    latest_check = latest_row[0] if latest_row else None
+
+    # Trend by date
+    cursor.execute("""
+        SELECT substr(created_at, 1, 10) as day, COUNT(*) as cnt
+        FROM privacy_investigations
+        GROUP BY day
+        ORDER BY day ASC
+        LIMIT 14
+    """)
+    trend_rows = cursor.fetchall()
+    trends = [{"date": r["day"], "investigations": r["cnt"]} for r in trend_rows]
+
+    conn.close()
+    return {
+        "total_investigations": total_inv,
+        "verified_exposure_findings": verified_findings,
+        "potential_matches": potential_matches,
+        "open_remediation_tasks": open_tasks,
+        "completed_remediation_actions": completed_actions,
+        "latest_check_at": latest_check,
+        "exposure_trends": trends
     }
