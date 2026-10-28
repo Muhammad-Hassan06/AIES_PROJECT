@@ -149,7 +149,12 @@ class AgenticInvestigationOrchestrator:
                 if not has_url_input and vision_result_obj.extracted_urls:
                     url = vision_result_obj.extracted_urls[0]
                     has_url_input = True
-                    tools_to_run.insert(1, "URL_INTELLIGENCE")
+                    if "URL_INTELLIGENCE" not in tools_to_run:
+                        tools_to_run.insert(1, "URL_INTELLIGENCE")
+
+                # If OCR extracted text, ensure MESSAGE_NLP is scheduled so it gets analyzed
+                if vision_result_obj.extracted_text and "MESSAGE_NLP" not in tools_to_run:
+                    tools_to_run.append("MESSAGE_NLP")
         else:
             trace.append(AgentStepEvent(
                 agent_id="agent_vision",
@@ -222,10 +227,14 @@ class AgenticInvestigationOrchestrator:
         # ====================================================================
         # AGENT 4: Message Analysis Agent
         # ====================================================================
-        text_to_analyze = text or ""
-        # If text is empty but OCR extracted text, also run NLP on OCR text
-        if not text_to_analyze and vision_result_obj and vision_result_obj.extracted_text:
-            text_to_analyze = vision_result_obj.extracted_text
+        raw_text = (text or "").strip()
+        ocr_text = (vision_result_obj.extracted_text or "").strip() if vision_result_obj else ""
+        if raw_text and ocr_text:
+            text_to_analyze = f"{raw_text}\n{ocr_text}" if raw_text != ocr_text else raw_text
+        elif ocr_text:
+            text_to_analyze = ocr_text
+        else:
+            text_to_analyze = raw_text
 
         if "MESSAGE_NLP" in tools_to_run or bool(text_to_analyze.strip()):
             step_nlp_start = time.time()

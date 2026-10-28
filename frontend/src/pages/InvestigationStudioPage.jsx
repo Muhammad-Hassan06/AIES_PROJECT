@@ -129,19 +129,45 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
     e.preventDefault();
     setErrorMessage('');
     
-    // Determine effective input_type based on active inputs
-    let calculatedType = 'combined';
-    if (activeTab === 'url' && !text && !screenshotBase64) {
-      calculatedType = 'url';
-    } else if ((activeTab === 'message' || activeTab === 'email') && !url && !screenshotBase64) {
-      calculatedType = 'message';
-    } else if (activeTab === 'screenshot' && !url && !text) {
-      calculatedType = 'screenshot';
-    }
+    // Determine effective payload strictly isolated by activeTab
+    let calculatedType = activeTab;
+    let effectiveUrl = undefined;
+    let effectiveText = undefined;
+    let effectiveSender = undefined;
+    let effectiveScreenshot = undefined;
 
-    if (!url.trim() && !text.trim() && !screenshotBase64) {
-      setErrorMessage('Please provide a URL, text message, or upload a screenshot to analyze.');
-      return;
+    if (activeTab === 'url') {
+      if (!url.trim()) {
+        setErrorMessage('Please provide a website URL to analyze.');
+        return;
+      }
+      calculatedType = 'url';
+      effectiveUrl = url.trim();
+    } else if (activeTab === 'message' || activeTab === 'email') {
+      if (!text.trim()) {
+        setErrorMessage('Please provide message or email text to analyze.');
+        return;
+      }
+      calculatedType = activeTab === 'email' ? 'email' : 'message';
+      effectiveText = text.trim();
+      effectiveSender = senderInfo.trim() || undefined;
+    } else if (activeTab === 'screenshot') {
+      if (!screenshotBase64) {
+        setErrorMessage('Please upload a screenshot image to analyze.');
+        return;
+      }
+      calculatedType = 'screenshot';
+      effectiveScreenshot = screenshotBase64;
+    } else if (activeTab === 'combined') {
+      if (!url.trim() && !text.trim() && !screenshotBase64) {
+        setErrorMessage('Please provide a URL, text message, or screenshot for combined analysis.');
+        return;
+      }
+      calculatedType = 'combined';
+      effectiveUrl = url.trim() || undefined;
+      effectiveText = text.trim() || undefined;
+      effectiveSender = senderInfo.trim() || undefined;
+      effectiveScreenshot = screenshotBase64 || undefined;
     }
 
     setIsInvestigating(true);
@@ -149,10 +175,10 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
     try {
       const payload = {
         input_type: calculatedType,
-        url: url.trim() || undefined,
-        text: text.trim() || undefined,
-        sender_info: senderInfo.trim() || undefined,
-        screenshot_base64: screenshotBase64 || undefined,
+        url: effectiveUrl,
+        text: effectiveText,
+        sender_info: effectiveSender,
+        screenshot_base64: effectiveScreenshot,
         manual_indicators: manualIndicators
       };
 

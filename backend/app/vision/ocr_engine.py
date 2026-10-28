@@ -95,11 +95,23 @@ class ScreenshotOCREngine:
         extracted_text = ""
         engine_name = "Embedded OCR Pattern Parser"
 
+        # Adaptive preprocessing: Upscale small or low-resolution images with Lanczos interpolation
+        # This dramatically enhances character segmentation and fidelity for Windows Native OCR & Tesseract
+        scale_factor = 1.0
+        if width < 1400 or height < 900:
+            scale_factor = max(2.0, min(3.0, 1600.0 / max(1, max(width, height))))
+            ocr_prep_img = img.resize(
+                (int(width * scale_factor), int(height * scale_factor)),
+                Image.Resampling.LANCZOS
+            )
+        else:
+            ocr_prep_img = img
+
         # Tier 1: Windows Native OCR (built into Windows 10/11)
         if not extracted_text and self.winocr_available:
             try:
                 import winocr
-                ocr_img = img.convert("RGBA") if img.mode != "RGBA" else img
+                ocr_img = ocr_prep_img.convert("RGBA") if ocr_prep_img.mode != "RGBA" else ocr_prep_img
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
@@ -120,7 +132,7 @@ class ScreenshotOCREngine:
         if not extracted_text and self.tesseract_available:
             try:
                 import pytesseract
-                gray_img = img.convert("L")
+                gray_img = ocr_prep_img.convert("L")
                 text = pytesseract.image_to_string(gray_img)
                 if text and len(text.strip()) > 0:
                     extracted_text = text.strip()
