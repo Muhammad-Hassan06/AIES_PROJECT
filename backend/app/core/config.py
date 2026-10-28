@@ -32,6 +32,7 @@ class Settings(BaseModel):
     API_V1_STR: str = "/api"
 
     # Multi-provider LLM Settings
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "auto")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")

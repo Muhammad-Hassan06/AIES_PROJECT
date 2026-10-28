@@ -9,7 +9,6 @@ import { useLanguage } from '../context/LanguageContext';
 export const NAV_ITEMS = [
   { id: 'investigate', labelKey: 'nav_investigate', defaultLabel: 'Investigate', icon: SearchCheck },
   { id: 'cases', labelKey: 'nav_cases', defaultLabel: 'Cases', icon: FolderArchive },
-  { id: 'agent', labelKey: 'nav_agent', defaultLabel: 'Agent Console', icon: Cpu },
   { id: 'privacy', labelKey: 'nav_privacy', defaultLabel: 'Digital Privacy', icon: EyeOff },
   { id: 'rag', labelKey: 'nav_rag', defaultLabel: 'Knowledge Base', icon: BookOpen },
   { id: 'trends', labelKey: 'nav_trends', defaultLabel: 'Threat Trends', icon: TrendingUp },

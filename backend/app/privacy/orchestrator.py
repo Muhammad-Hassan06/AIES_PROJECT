@@ -260,32 +260,6 @@ class DigitalPrivacyOrchestrator:
                 }
             ))
 
-        # Add spam intelligence finding if spam evidence was provided
-        if spam_result:
-            s_verdict = spam_result["verdict"]
-            f_id_spam = f"FND-SPAM-{uuid.uuid4().hex[:5].upper()}"
-            spam_cat = ExposureCategory.SUSPECTED_PHISHING if spam_result.get("is_phishing") else (
-                ExposureCategory.PROMOTIONAL_SPAM if spam_result.get("is_promotional") else ExposureCategory.PUBLIC_DIRECTORY
-            )
-            verified_findings.append(PrivacyFinding(
-                finding_id=f_id_spam,
-                investigation_id=inv_id,
-                identifier_type="sender",
-                exposure_category=spam_cat,
-                source_name="Submitted Communication Evidence",
-                source_url=spam_result.get("url_findings", [{}])[0].get("url") if spam_result.get("url_findings") else None,
-                source_type="USER_EVIDENCE",
-                discovered_at=now_utc,
-                evidence_reference="Direct User Submission & OCR",
-                evidence_excerpt_redacted=spam_result.get("analyzed_text_redacted", "")[:250],
-                verification_status=VerificationStatus.VERIFIED,
-                confidence_score=0.90 if spam_result.get("is_phishing") else 0.80,
-                confidence_explanation="Grounded directly in user-submitted headers, OCR text, and NLP forensic features.",
-                risk_level=spam_result.get("risk_level", PrivacyRiskLevel.LOW),
-                recommended_action=spam_result.get("recommended_action", RemediationActionType.REVIEW_PRIVACY),
-                last_checked_at=now_utc,
-                removal_status=RemediationStatus.NOT_STARTED
-            ))
 
         step_a5 = AgentExecutionStep(
             agent_id="agent_5_evidence_verification",

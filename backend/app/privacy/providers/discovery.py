@@ -226,6 +226,8 @@ class HoleheRegistrationDiscoveryAdapter(BaseDiscoveryProvider):
             return [], False, f"Holehe registration probe error: {str(e)[:120]}"
 
 
+from app.privacy.fixtures import get_fixture_by_phone, is_synthetic_number
+
 class LocalVaultDiscoveryAdapter(BaseDiscoveryProvider):
     """
     Local Case Vault Discovery Provider:
@@ -245,31 +247,66 @@ class LocalVaultDiscoveryAdapter(BaseDiscoveryProvider):
 
     def search(self, identifier_type: str, normalized_value: str, metadata: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], bool, str]:
         results = []
+
+        # 1. Check Demo / Synthetic Test Fixtures if in Demo Mode
+        if settings.DEMO_MODE and identifier_type == "phone":
+            fixture = get_fixture_by_phone(normalized_value)
+            if fixture:
+                results.append({
+                    "source_name": f"Synthetic Test Fixture ({fixture['fixture_id']})",
+                    "source_url": None,
+                    "snippet": f"[DEMO DATA - SYNTHETIC TEST RECORD] Scenario: {fixture['scenario']}. Fictional summary: \"{fixture['message_summary']}\". Illustrative category: {fixture['category']}.",
+                    "source_type": "development_fixture",
+                    "category": ExposureCategory.SUSPECTED_PHISHING if fixture["severity"] in ("CRITICAL", "HIGH") else ExposureCategory.PROMOTIONAL_SPAM,
+                    "is_synthetic": True,
+                    "is_verified": False,
+                    "fixture_id": fixture["fixture_id"],
+                    "case_id": fixture["fixture_id"]
+                })
+                return results, True, f"Found 1 synthetic test fixture for {fixture['phone_id']} (DEMO MODE active)."
+
+        # 2. Strict query of genuinely logged incident cases in Local Vault
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            # Search investigations where raw_text, raw_sender, or raw_url contains the identifier
-            needle = f"%{normalized_value}%"
-            cursor.execute("""
-                SELECT case_id, timestamp, risk_level, raw_sender, raw_text, summary
-                FROM investigations
-                WHERE raw_sender LIKE ? OR raw_text LIKE ? OR raw_url LIKE ?
-                LIMIT 5
-            """, (needle, needle, needle))
+            
+            clean_digits = "".join(c for c in normalized_value if c.isdigit())
+            
+            if identifier_type == "phone":
+                # Look strictly for cases where this number was the offending sender
+                last_digits = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+                cursor.execute("""
+                    SELECT case_id, timestamp, risk_level, raw_sender, raw_text, summary
+                    FROM investigations
+                    WHERE raw_sender LIKE ? OR raw_sender LIKE ?
+                    LIMIT 20
+                """, (f"%{normalized_value}%", f"%{last_digits}%"))
+            else:
+                needle = f"%{normalized_value}%"
+                cursor.execute("""
+                    SELECT case_id, timestamp, risk_level, raw_sender, raw_text, summary
+                    FROM investigations
+                    WHERE raw_sender LIKE ? OR raw_url LIKE ?
+                    LIMIT 20
+                """, (needle, needle))
+                
             rows = cursor.fetchall()
             conn.close()
 
             for r in rows:
                 results.append({
-                    "source_name": f"Local Case History ({r['case_id']})",
+                    "source_name": f"Local Threat Incident Case ({r['case_id']})",
                     "source_url": None,
-                    "snippet": f"Identifier appeared in prior investigation {r['case_id']} on {r['timestamp']}. Risk: {r['risk_level']}. Summary: {r['summary'][:150]}",
+                    "snippet": f"Identifier registered in prior complaint {r['case_id']} on {r['timestamp']}. Recorded Risk: {r['risk_level']}. Forensic Summary: {r['summary'][:150]}",
                     "source_type": "LOCAL_VAULT",
-                    "category": ExposureCategory.PUBLIC_DIRECTORY,
+                    "category": ExposureCategory.SUSPECTED_PHISHING if r["risk_level"] in ("HIGH", "CRITICAL") else ExposureCategory.PUBLIC_DIRECTORY,
                     "case_id": r["case_id"]
                 })
 
-            return results, True, f"Found {len(results)} records in local case history."
+            if results:
+                return results, True, f"Found {len(results)} prior threat records in local case history."
+            else:
+                return [], True, "0 results found in the sources checked. No matching records were found in the sources checked. This does not prove that the number has never been exposed or registered elsewhere."
         except Exception as e:
             return [], False, f"Local vault query error: {str(e)[:120]}"
 
@@ -316,7 +353,13 @@ class DiscoveryManager:
         sources_unavailable = 0
         notes = []
 
+        is_synth = identifier_type == "phone" and is_synthetic_number(normalized_value)
+
         for p in self.providers:
+            if is_synth and p.provider_id != "local_vault":
+                # Fictional test numbers must never be queried with external search or exposure providers
+                continue
+
             if identifier_type not in p.supported_identifiers:
                 continue
 

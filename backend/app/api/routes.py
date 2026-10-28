@@ -550,3 +550,64 @@ def get_privacy_overview_endpoint():
     """Returns aggregate exposure and remediation metrics for the Digital Privacy dashboard."""
     return privacy_service.get_overview_metrics()
 
+# ==============================================================================
+# Feature 1: Multi-Source Threat Intelligence Verification Endpoint
+# ==============================================================================
+from app.intelligence.multi_threat_intel import multi_threat_intel
+
+@router.get("/threat-intel/lookup")
+def threat_intel_lookup_endpoint(url: str):
+    """
+    Checks URL across PhishTank, URLhaus, and Google Safe Browsing APIs.
+    Returns unified provider status, threats, and attribution.
+    """
+    if not url or not url.strip():
+        raise HTTPException(status_code=400, detail="Missing required 'url' parameter")
+    return multi_threat_intel.verify_url(url)
+
+# ==============================================================================
+# Feature 2: Email Header Authentication & Sender Consistency Analyzer Endpoint
+# ==============================================================================
+from app.intelligence.email_authenticator import email_authenticator
+
+@router.post("/analyze/email-headers")
+def analyze_email_headers_endpoint(payload: Dict[str, str] = Body(...)):
+    """
+    Parses raw RFC 5322 email headers and audits SPF, DKIM, DMARC,
+    visible From vs Return-Path, and Reply-To consistency.
+    """
+    raw_headers = payload.get("raw_headers", "")
+    if not raw_headers or not raw_headers.strip():
+        raise HTTPException(status_code=400, detail="Missing 'raw_headers' in request body")
+    return email_authenticator.analyze(raw_headers)
+
+# ==============================================================================
+# Feature 3: Scam Campaign Clustering & Pattern Detection Endpoint
+# ==============================================================================
+from app.analytics.campaign_clustering import campaign_clustering_engine
+
+@router.get("/campaigns")
+def list_scam_campaigns_endpoint():
+    """
+    Clusters stored investigations and synthetic fixtures into syndicated scam campaigns
+    based on common sender phone numbers, URLs, and institutional targets.
+    """
+    return campaign_clustering_engine.detect_campaigns()
+
+# ==============================================================================
+# Synthetic Test Fixtures Endpoint (Part 7)
+# ==============================================================================
+from app.db.database import list_synthetic_fixtures, reset_synthetic_fixtures
+
+@router.get("/fixtures/synthetic")
+def get_synthetic_fixtures_endpoint():
+    """Lists the 10 fictional test phone numbers and synthetic reports for testing."""
+    return list_synthetic_fixtures()
+
+@router.post("/fixtures/synthetic/reset")
+def reset_synthetic_fixtures_endpoint():
+    """Resets synthetic test fixtures to initial state."""
+    count = reset_synthetic_fixtures()
+    return {"status": "reset", "fixtures_count": count}
+
+

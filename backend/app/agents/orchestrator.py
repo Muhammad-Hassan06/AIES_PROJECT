@@ -167,6 +167,16 @@ class AgenticInvestigationOrchestrator:
             clean_url = sanitize_url(url)
             url_pred = url_classifier.predict(clean_url)
             intel_info = threat_intel.check_url_reputation(clean_url)
+            
+            # Feature 1: Multi-Source Threat Intelligence Verification (PhishTank, URLhaus, Safe Browsing)
+            from app.intelligence.multi_threat_intel import multi_threat_intel
+            multi_intel = multi_threat_intel.verify_url(clean_url)
+            intel_info["multi_threat_intel"] = multi_intel
+            if multi_intel.get("confirmed_threat_detected"):
+                url_pred["is_phishing"] = True
+                url_pred["phishing_probability"] = max(url_pred["phishing_probability"], 0.95)
+                url_pred["model_name"] = f"{url_pred['model_name']} + {multi_intel['primary_verdict']}"
+
             step_url_dur = (time.time() - step_url_start) * 1000.0
 
             url_result_obj = URLAnalysisResult(
@@ -180,19 +190,20 @@ class AgenticInvestigationOrchestrator:
                 latency_ms=url_pred["latency_ms"]
             )
 
+            threat_flag_note = f" (Confirmed Threat: {multi_intel['primary_verdict']})" if multi_intel.get("confirmed_threat_detected") else ""
             trace.append(AgentStepEvent(
                 agent_id="agent_url",
                 agent_name="3. URL Intelligence Agent",
                 status=AgentStatus.COMPLETED,
                 duration_ms=round(step_url_dur, 2),
-                summary=f"Classified URL '{clean_url}' via {url_pred['model_name']}. Phishing risk: {url_pred['phishing_probability']:.2%}.",
-                findings_count=len(url_pred["top_signals"])
+                summary=f"Classified URL '{clean_url}' via {url_pred['model_name']}. Phishing risk: {url_pred['phishing_probability']:.2%}{threat_flag_note}.",
+                findings_count=len(url_pred["top_signals"]) + (1 if multi_intel.get("confirmed_threat_detected") else 0)
             ))
 
             ledger.append(EvidenceLedgerEntry(
-                finding=f"Machine Learning URL Phishing Probability: {url_pred['phishing_probability']:.1%}",
-                evidence_source="Target URL String & Lexical Decomposition",
-                observed_value=f"Domain: {intel_info['hostname']}, IsIP: {url_pred['features']['is_domain_ip']}",
+                finding=f"Machine Learning & Multi-Source URL Threat Probability: {url_pred['phishing_probability']:.1%}",
+                evidence_source="Target URL Lexical & Multi-Source Threat Intel",
+                observed_value=f"Domain: {intel_info['hostname']}, Multi-Threat Status: {multi_intel['primary_verdict']}",
                 analysis_component=url_pred["model_name"],
                 timestamp=iso_timestamp,
                 confidence=url_pred["phishing_probability"] if url_pred["is_phishing"] else (1.0 - url_pred["phishing_probability"]),

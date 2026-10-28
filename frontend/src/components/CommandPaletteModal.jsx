@@ -60,7 +60,6 @@ export default function CommandPaletteModal({
   const tabActions = [
     { id: 'tab-investigate', title: 'Go to Investigate Studio', category: 'Navigation', icon: SearchCheck, action: () => onNavigateTab('investigate') },
     { id: 'tab-cases', title: 'Go to Cases Vault', category: 'Navigation', icon: FolderArchive, action: () => onNavigateTab('cases') },
-    { id: 'tab-agent', title: 'Go to Investigator Agent Console', category: 'Navigation', icon: Cpu, action: () => onNavigateTab('agent') },
     { id: 'tab-rag', title: 'Go to Grounded Knowledge Base (PECA / SBP)', category: 'Navigation', icon: BookOpen, action: () => onNavigateTab('rag') },
     { id: 'tab-trends', title: 'Go to Threat Trends & Analytics', category: 'Navigation', icon: TrendingUp, action: () => onNavigateTab('trends') },
     { id: 'tab-models', title: 'Go to Models & Data Provenance', category: 'Navigation', icon: Database, action: () => onNavigateTab('models') },

@@ -159,47 +159,51 @@ class GenerativeAISecurityExplainer:
             evidence_dict, risk_level, triggered_rules, url_result, nlp_result, vision_result
         )
 
-        if not self.client or not self.api_key:
-            return deterministic
-
-        # Construct strict grounding prompt
-        prompt = f"""
-You are CyberShield AI's senior cybersecurity forensic explainer.
-Generate an objective, evidence-grounded explanation based ONLY on the verified data below.
-DO NOT invent external facts, domain ownership, or attacker identities.
-
-[STRUCTURED EVIDENCE]
-Case Risk Level: {risk_level}
-URL Analysis: {json.dumps(url_result) if url_result else 'None'}
-NLP Analysis: {json.dumps(nlp_result) if nlp_result else 'None'}
-Vision OCR: {json.dumps(vision_result) if vision_result else 'None'}
-Triggered Expert Rules: {json.dumps(triggered_rules)}
-
-Respond in valid JSON with these exact keys:
-{{
-  "executive_summary": "Plain-language 2-3 sentence explanation for non-technical users",
-  "technical_report": "Detailed markdown explanation of forensic findings and reasoning",
-  "key_warnings": ["List of the top 3-4 most critical warning signs observed"],
-  "recommended_actions": ["List of 4-5 immediate actionable security recommendations"],
-  "limitations": ["List of what this analysis cannot establish based on available data"]
-}}
-"""
+        # Try configured multi-provider LLM (Gemini, Groq, OpenAI, Anthropic)
         try:
-            response = self.client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=prompt,
-                config={"response_mime_type": "application/json"}
-            )
-            parsed = json.loads(response.text)
-            return {
-                "executive_summary": parsed.get("executive_summary", deterministic["executive_summary"]),
-                "technical_report": parsed.get("technical_report", deterministic["technical_report"]),
-                "key_warnings": parsed.get("key_warnings", deterministic["key_warnings"]),
-                "recommended_actions": parsed.get("recommended_actions", deterministic["recommended_actions"]),
-                "explainer_provider": f"Gemini ({settings.GEMINI_MODEL})"
-            }
+            from app.privacy.providers.llm_provider import llm_service
+            active_adapter, _ = llm_service.select_active_provider()
+            if active_adapter:
+                success, text, err = active_adapter.generate(prompt, temperature=0.2, max_tokens=1000)
+                if success and text:
+                    # Strip markdown fence if present
+                    clean_text = text.strip()
+                    if clean_text.startswith("```json"):
+                        clean_text = clean_text[7:]
+                    if clean_text.startswith("```"):
+                        clean_text = clean_text[3:]
+                    if clean_text.endswith("```"):
+                        clean_text = clean_text[:-3]
+                    parsed = json.loads(clean_text.strip())
+                    return {
+                        "executive_summary": parsed.get("executive_summary", deterministic["executive_summary"]),
+                        "technical_report": parsed.get("technical_report", deterministic["technical_report"]),
+                        "key_warnings": parsed.get("key_warnings", deterministic["key_warnings"]),
+                        "recommended_actions": parsed.get("recommended_actions", deterministic["recommended_actions"]),
+                        "explainer_provider": f"{active_adapter.provider_name} ({active_adapter.model_name})"
+                    }
         except Exception as e:
-            print(f"[Explainer] Gemini API call failed, using deterministic fallback: {e}")
-            return deterministic
+            print(f"[Explainer] Multi-provider LLM failed: {e}")
+
+        # Fallback to direct Gemini client if initialized
+        if self.client and self.api_key:
+            try:
+                response = self.client.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=prompt,
+                    config={"response_mime_type": "application/json"}
+                )
+                parsed = json.loads(response.text)
+                return {
+                    "executive_summary": parsed.get("executive_summary", deterministic["executive_summary"]),
+                    "technical_report": parsed.get("technical_report", deterministic["technical_report"]),
+                    "key_warnings": parsed.get("key_warnings", deterministic["key_warnings"]),
+                    "recommended_actions": parsed.get("recommended_actions", deterministic["recommended_actions"]),
+                    "explainer_provider": f"Gemini ({settings.GEMINI_MODEL})"
+                }
+            except Exception as e:
+                print(f"[Explainer] Gemini API call failed: {e}")
+
+        return deterministic
 
 security_explainer = GenerativeAISecurityExplainer()

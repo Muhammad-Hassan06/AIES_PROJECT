@@ -96,6 +96,23 @@ def init_db():
             FOREIGN KEY (investigation_id) REFERENCES privacy_investigations(investigation_id) ON DELETE CASCADE
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS synthetic_test_fixtures (
+            fixture_id TEXT PRIMARY KEY,
+            phone_id TEXT NOT NULL,
+            phone_number TEXT NOT NULL,
+            phone_digits TEXT NOT NULL,
+            title TEXT NOT NULL,
+            scenario TEXT NOT NULL,
+            message_summary TEXT NOT NULL,
+            category TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            is_synthetic INTEGER DEFAULT 1,
+            source_type TEXT DEFAULT 'development_fixture',
+            is_verified INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
     conn.commit()
 
     # Automatic safe migration for existing databases
@@ -602,3 +619,102 @@ def get_privacy_overview_metrics() -> Dict[str, Any]:
         "latest_check_at": latest_check,
         "exposure_trends": trends
     }
+
+
+# ==============================================================================
+# Synthetic Test Fixtures Management (Part 7)
+# ==============================================================================
+
+def seed_synthetic_fixtures() -> int:
+    """
+    Idempotently seeds the 10 North American fictional test phone numbers and reports
+    into synthetic_test_fixtures. Does NOT contaminate production investigations.
+    """
+    from app.privacy.fixtures import SYNTHETIC_TEST_FIXTURES
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    count = 0
+    for f in SYNTHETIC_TEST_FIXTURES:
+        cursor.execute("""
+            INSERT OR REPLACE INTO synthetic_test_fixtures (
+                fixture_id, phone_id, phone_number, phone_digits,
+                title, scenario, message_summary, category, severity,
+                is_synthetic, source_type, is_verified, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'development_fixture', 0, ?)
+        """, (
+            f["fixture_id"], f["phone_id"], f["phone_number"], f["phone_digits"],
+            f["title"], f["scenario"], f["message_summary"], f["category"], f["severity"],
+            f["created_at"]
+        ))
+        count += 1
+    conn.commit()
+    conn.close()
+    return count
+
+def reset_synthetic_fixtures() -> int:
+    """Clears and re-seeds synthetic test fixtures."""
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM synthetic_test_fixtures")
+    conn.commit()
+    conn.close()
+    return seed_synthetic_fixtures()
+
+def list_synthetic_fixtures() -> List[Dict[str, Any]]:
+    """Returns all 10 synthetic test fixtures."""
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM synthetic_test_fixtures ORDER BY fixture_id ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def seed_sample_spam_cases() -> int:
+    """
+    Seeds 8 realistic, distinct fraud incident complaints against test spammer 03001234567
+    into the local investigations case history.
+    """
+    cases = [
+        ("CS-HBL-001", "HBL Urgent ATM Card Block OTP Phishing", "URGENT: Your HBL Bank debit card has been blocked. Send 6-digit OTP immediately to unlock.", "03001234567", "CRITICAL"),
+        ("CS-BISP-002", "BISP 8171 Benazir Cash Grant Lure", "BISP Alert: You have been approved for Rs 25,000 cash grant. Call 03001234567 to verify CNIC and pay Rs 1,500 biometric fee.", "03001234567", "HIGH"),
+        ("CS-JC-003", "JazzCash Wallet Biometric Suspension", "JazzCash Notice: Unusual login detected. Your wallet will be frozen within 2 hours. Call 03001234567 to confirm secret MPIN.", "03001234567", "CRITICAL"),
+        ("CS-EP-004", "Easypaisa Lucky Draw Jeeto Pakistan", "Inam Mubarak! You have won Rs 100,000 in Jeeto Pakistan. Contact 03001234567 to claim prize after sending registration fee.", "03001234567", "HIGH"),
+        ("CS-FBR-005", "FBR Tax Penalty & Police Raid Extortion", "FBR Warning: Outstanding tax default of Rs 42,000 against your CNIC. Contact officer at 03001234567 immediately to avoid arrest raid.", "03001234567", "CRITICAL"),
+        ("CS-POST-006", "Pakistan Post Detained Parcel Customs Duty", "Pakistan Post Notice: Package detained at foreign customs. Pay Rs 850 clearance fee by calling customs dispatch at 03001234567.", "03001234567", "HIGH"),
+        ("CS-FIA-007", "FIA Cyber Crime Arrest Warrant Summons", "LEGAL NOTICE: FIA Cyber Crime Wing has issued FIR warrant #8812 against your SIM. Settle FIR immediately by calling 03001234567.", "03001234567", "CRITICAL"),
+        ("CS-MEEZ-008", "Meezan Bank NetBanking Re-KYC Prompt", "Dear Customer, your Meezan internet banking session expired. Update password and ATM PIN by contacting phone branch at 03001234567.", "03001234567", "CRITICAL"),
+    ]
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    count = 0
+    now_str = "2026-10-20T12:00:00Z"
+    for cid, title, text, sender, r_level in cases:
+        report_data = {
+            "case_id": cid,
+            "timestamp": now_str,
+            "input_type": "sms",
+            "status": "COMPLETED",
+            "risk_level": r_level,
+            "model_confidence": 0.95,
+            "evidence_strength": "STRONG",
+            "summary": f"{title}. Offending sender: {sender}. {text}",
+            "raw_input": {"text": text, "sender_info": sender, "url": ""},
+            "raw_text": text,
+            "raw_sender": sender,
+            "raw_url": ""
+        }
+        cursor.execute("""
+            INSERT OR REPLACE INTO investigations (
+                case_id, timestamp, input_type, status, risk_level,
+                model_confidence, evidence_strength, summary,
+                full_report_json, raw_url, raw_text, raw_sender
+            ) VALUES (?, ?, 'sms', 'COMPLETED', ?, 0.95, 'STRONG', ?, ?, '', ?, ?)
+        """, (cid, now_str, r_level, report_data["summary"], json.dumps(report_data), text, sender))
+        count += 1
+    conn.commit()
+    conn.close()
+    return count
+

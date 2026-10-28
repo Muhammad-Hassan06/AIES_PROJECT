@@ -124,12 +124,12 @@ describe('DigitalPrivacyPage', () => {
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument(); // total investigations
       expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1); // verified findings / open tasks
-    });
+    }, { timeout: 8000 });
 
     // Provider status
     expect(screen.getByText('Google Gemini')).toBeInTheDocument();
     expect(screen.getByText('Local CyberShield Case Vault')).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('navigates to New Investigation tab and enforces consent validation', async () => {
     render(

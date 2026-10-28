@@ -22,6 +22,14 @@ SUSPICIOUS_KEYWORDS = [
     "bisp", "ehsaas", "nadra", "fbr", "hbl", "ubl", "meezan", "alfalah", "jazzcash", "easypaisa"
 ]
 
+KNOWN_LEGITIMATE_DOMAINS = {
+    "google.com", "microsoft.com", "apple.com", "github.com", "wikipedia.org", "wikipedia.com", "wikimedia.org",
+    "gov.pk", "pakistan.gov.pk", "pkcert.gov.pk", "nccia.gov.pk", "fbr.gov.pk",
+    "bisp.gov.pk", "nadra.gov.pk", "pta.gov.pk", "sbp.org.pk",
+    "hbl.com", "ubldigital.com", "meezanbank.com", "bankalfalah.com", "mcb.com.pk",
+    "jazzcash.com.pk", "easypaisa.com.pk", "daraz.pk", "youtube.com", "linkedin.com", "cloudflare.com", "stackoverflow.com"
+}
+
 FEATURE_NAMES = [
     "url_length",
     "domain_length",
@@ -181,6 +189,15 @@ class URLThreatClassifier:
             phishing_prob = min(0.99, max(0.01, round(score, 4)))
             is_phishing = phishing_prob >= 0.50
             model_name = "Heuristic Phishing Scorer (Uncalibrated Fallback)"
+
+        # Check known legitimate domain whitelist
+        parsed_url = urlparse(url if "://" in url else "http://" + url)
+        hostname = (parsed_url.hostname or "").lower()
+        is_known_legit = any(hostname == d or hostname.endswith("." + d) for d in KNOWN_LEGITIMATE_DOMAINS)
+        if is_known_legit and not features["is_domain_ip"] and not features["has_at_symbol"] and not features["has_double_slash_redirect"] and features["suspicious_keyword_count"] == 0:
+            phishing_prob = 0.02
+            is_phishing = False
+            model_name = "Verified Domain Whitelist & RandomForest"
 
         # Generate interpretable signals for explainability
         top_signals = []

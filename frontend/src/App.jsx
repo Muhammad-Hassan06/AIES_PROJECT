@@ -7,7 +7,6 @@ import CommandPaletteModal from './components/CommandPaletteModal';
 // Pages
 import InvestigationStudioPage from './pages/InvestigationStudioPage';
 import CasesPage from './pages/CasesPage';
-import AgentConsolePage from './pages/AgentConsolePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import ThreatTrendsPage from './pages/ThreatTrendsPage';
 import ModelsDataPage from './pages/ModelsDataPage';
@@ -202,10 +201,6 @@ function AppContent() {
               <CasesPage
                 onSelectCase={handleOpenCase}
               />
-            )}
-
-            {activeTab === 'agent' && (
-              <AgentConsolePage />
             )}
 
             {activeTab === 'rag' && (
