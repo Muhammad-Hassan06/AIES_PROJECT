@@ -238,6 +238,32 @@ class ScreenshotOCREngine:
                 else:
                     engine_name = "Visual Layout Analyzer (No Text Detected)"
 
+        # Self-referential loop guard: detect if user uploaded a screenshot of CyberShield's own results UI
+        # Signature phrases that only appear in the CyberShield verdict report page
+        CYBERSHIELD_UI_SIGNATURES = [
+            "forensic risk verdict",
+            "plain-language verdict",
+            "evidence insufficient",
+            "simple view active",
+            "share-safe summary",
+            "agent execution trace",
+            "triggered rules",
+            "evidence ledger",
+            "cybershield ai",
+        ]
+        text_lower_check = extracted_text.lower() if extracted_text else ""
+        self_ref_hits = sum(1 for sig in CYBERSHIELD_UI_SIGNATURES if sig in text_lower_check)
+        if self_ref_hits >= 2:
+            return {
+                "error": "Self-referential screenshot detected: You appear to have uploaded a screenshot of CyberShield's own results page. Please upload the actual suspicious message, email, or phishing webpage screenshot instead.",
+                "extracted_text": "",
+                "extracted_urls": [],
+                "detected_keywords": [],
+                "visual_indicators": ["⚠️ Screenshot is of CyberShield results UI — upload the actual phishing content"],
+                "ocr_engine": engine_name,
+                "latency_ms": round((time.time() - start_time) * 1000.0, 2)
+            }
+
         # Extract URLs from recognized text
         found_urls = re.findall(URL_REGEX, extracted_text, re.IGNORECASE) if extracted_text else []
         cleaned_urls = []
@@ -248,20 +274,24 @@ class ScreenshotOCREngine:
             if u_clean not in cleaned_urls:
                 cleaned_urls.append(u_clean)
 
-        # Detect suspicious login keywords & brands with exact word boundaries
+        # Detect suspicious login keywords & brands
+        # Use \s+ instead of literal space to handle OCR-introduced newlines/multiple spaces in multi-word phrases
         text_lower = extracted_text.lower() if extracted_text else ""
+        # Normalize whitespace in OCR text for robust multi-word matching
+        text_normalized = re.sub(r'\s+', ' ', text_lower).strip()
         detected_keywords = []
-        if text_lower:
+        if text_normalized:
             for kw in SUSPICIOUS_LOGIN_KEYWORDS:
-                pattern = r"\b" + re.escape(kw) + r"\b"
-                if re.search(pattern, text_lower):
+                # Build pattern with \s+ between words to handle OCR whitespace variations
+                kw_pattern = r'\b' + r'\s+'.join(re.escape(w) for w in kw.split()) + r'\b'
+                if re.search(kw_pattern, text_normalized):
                     detected_keywords.append(kw)
 
         detected_brands = []
-        if text_lower:
+        if text_normalized:
             for brand in SUSPICIOUS_BRAND_CUES:
-                pattern = r"\b" + re.escape(brand) + r"\b"
-                if re.search(pattern, text_lower):
+                brand_pattern = r'\b' + r'\s+'.join(re.escape(w) for w in brand.split()) + r'\b'
+                if re.search(brand_pattern, text_normalized):
                     detected_brands.append(brand)
 
         visual_indicators = []

@@ -106,13 +106,20 @@ class AgenticInvestigationOrchestrator:
             ocr_out = ocr_engine.process_screenshot_base64(screenshot_base64, filename="evidence_upload.png")
             step_ocr_dur = (time.time() - step_ocr_start) * 1000.0
 
+            is_self_ref = "self-referential" in ocr_out.get("error", "").lower()
             if "error" in ocr_out and not ocr_out.get("extracted_text"):
+                summary_msg = (
+                    "⚠️ You uploaded a screenshot of CyberShield's own results page. "
+                    "Please upload the actual suspicious message, email, or phishing webpage screenshot."
+                    if is_self_ref
+                    else f"Vision preprocessing error: {ocr_out['error']}"
+                )
                 trace.append(AgentStepEvent(
                     agent_id="agent_vision",
                     agent_name="2. Screenshot Analysis Agent",
                     status=AgentStatus.FAILED,
                     duration_ms=round(step_ocr_dur, 2),
-                    summary=f"Vision preprocessing error: {ocr_out['error']}",
+                    summary=summary_msg,
                     error=ocr_out["error"]
                 ))
             else:
