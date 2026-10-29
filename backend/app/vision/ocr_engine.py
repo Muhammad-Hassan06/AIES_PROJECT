@@ -7,17 +7,22 @@ import concurrent.futures
 from typing import Dict, Any, List, Optional
 from PIL import Image
 from app.core.security import validate_image_header
+from app.core.config import settings
 
 URL_REGEX = r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|pk|xyz|top|info|live|online|site|co|io|biz|ru|cn)[^\s<>\"']*)"
 
 SUSPICIOUS_LOGIN_KEYWORDS = [
     "sign in", "login", "password", "username", "enter pin", "otp verification",
-    "cnic", "security question", "debit card", "cvv", "verify identity"
+    "cnic", "security question", "debit card", "cvv", "verify identity",
+    "reset your password", "reset password", "account holder", "new device", "new divice",
+    "unusual activity", "suspicious activity", "verify your account", "transactions"
 ]
 
 SUSPICIOUS_BRAND_CUES = [
     "hbl", "ubl", "meezan", "bank alfalah", "mcb", "easypaisa", "jazzcash",
-    "bisp", "nadra", "fbr", "pakistan post", "tcs", "state bank", "amazon"
+    "bisp", "nadra", "fbr", "pakistan post", "tcs", "state bank", "amazon",
+    "bank of america", "bank america", "chase", "wells fargo", "citibank",
+    "paypal", "apple", "microsoft", "netflix", "dhl", "fedex"
 ]
 
 class ScreenshotOCREngine:
@@ -140,7 +145,85 @@ class ScreenshotOCREngine:
             except Exception:
                 pass
 
-        # Tier 3: EXIF metadata / comment extraction or clean non-hallucinatory fallback
+        # Tier 3: Multimodal Vision API OCR (Gemini / Groq / OpenAI)
+        # Indispensable on cloud hosts (such as Render Linux containers) where native desktop OCR is absent
+        if not extracted_text:
+            # 3a. Try Gemini Vision if API key is configured
+            if settings.GEMINI_API_KEY:
+                try:
+                    from google import genai
+                    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                    v_res = client.models.generate_content(
+                        model=settings.GEMINI_MODEL or "gemini-2.5-flash",
+                        contents=[ocr_prep_img, "Extract all visible text, URLs, numbers, email addresses, and words from this screenshot verbatim. Do not explain, return only the raw text:"]
+                    )
+                    if v_res and v_res.text and len(v_res.text.strip()) > 5:
+                        extracted_text = v_res.text.strip()
+                        engine_name = f"Gemini Multimodal Vision ({settings.GEMINI_MODEL})"
+                except Exception:
+                    pass
+
+            # 3b. Try Groq LLaMA 3.2 Vision if Groq key is configured
+            if not extracted_text and settings.GROQ_API_KEY:
+                try:
+                    import httpx
+                    b64_clean = base64_str if "," not in base64_str else base64_str.split(",", 1)[1]
+                    groq_payload = {
+                        "model": "llama-3.2-11b-vision-preview",
+                        "messages": [{
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Extract all readable text, URLs, phone numbers, and words from this image verbatim. Return only the raw text with no commentary."},
+                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_clean}"}}
+                            ]
+                        }],
+                        "temperature": 0.1
+                    }
+                    g_res = httpx.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
+                        json=groq_payload,
+                        timeout=12.0
+                    )
+                    if g_res.status_code == 200:
+                        g_content = g_res.json()["choices"][0]["message"]["content"]
+                        if g_content and len(g_content.strip()) > 5:
+                            extracted_text = g_content.strip()
+                            engine_name = "Groq LLaMA 3.2 Vision"
+                except Exception:
+                    pass
+
+            # 3c. Try OpenAI Vision if OpenAI key is configured
+            if not extracted_text and settings.OPENAI_API_KEY:
+                try:
+                    import httpx
+                    b64_clean = base64_str if "," not in base64_str else base64_str.split(",", 1)[1]
+                    oai_payload = {
+                        "model": "gpt-4o-mini",
+                        "messages": [{
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Extract all readable text, URLs, phone numbers, and words from this image verbatim. Return only the raw text."},
+                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_clean}"}}
+                            ]
+                        }],
+                        "max_tokens": 1000
+                    }
+                    o_res = httpx.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                        json=oai_payload,
+                        timeout=12.0
+                    )
+                    if o_res.status_code == 200:
+                        o_content = o_res.json()["choices"][0]["message"]["content"]
+                        if o_content and len(o_content.strip()) > 5:
+                            extracted_text = o_content.strip()
+                            engine_name = "OpenAI GPT-4o-mini Vision"
+                except Exception:
+                    pass
+
+        # Tier 4: EXIF metadata / comment extraction or clean non-hallucinatory fallback
         if not extracted_text:
             if "comment" in img.info:
                 comment_text = str(img.info["comment"]).strip()
@@ -150,7 +233,10 @@ class ScreenshotOCREngine:
             
             if not extracted_text:
                 extracted_text = ""
-                engine_name = "Visual Layout Analyzer (No Text Detected)"
+                if not self.winocr_available and not self.tesseract_available:
+                    engine_name = "OCR Engine Unavailable (Tesseract binary or Vision API key required on host)"
+                else:
+                    engine_name = "Visual Layout Analyzer (No Text Detected)"
 
         # Extract URLs from recognized text
         found_urls = re.findall(URL_REGEX, extracted_text, re.IGNORECASE) if extracted_text else []

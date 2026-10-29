@@ -274,10 +274,19 @@ class RuleEngine:
         # Rule 5 — Insufficient Evidence Safeguard (RULE_INSUFF_05)
         text_len = len(nlp_result.get("analyzed_text", "")) if has_nlp else 0
         if not has_url and text_len < 15 and not has_ocr and not manual:
-            matched_conds = [
-                "Evidence length under minimum diagnostic threshold",
-                "Zero high-risk features detected across all models"
-            ]
+            if input_type == "screenshot":
+                matched_conds = [
+                    "Screenshot image submitted but no readable text or URLs could be extracted",
+                    "OCR engine was unable to extract legible forensic cues from artifact"
+                ]
+                explanation = "CyberShield AI was unable to read legible text or links from the provided screenshot. If running on cloud/Linux, verify Tesseract OCR or a Vision API is enabled, or paste the message text directly."
+            else:
+                matched_conds = [
+                    "Evidence length under minimum diagnostic threshold",
+                    "Zero high-risk features detected across all models"
+                ]
+                explanation = "To maintain high scientific integrity, CyberShield AI refrains from guessing when submitted input lacks sufficient diagnostic indicators."
+
             triggered.append(TriggeredRule(
                 rule_id="RULE_INSUFF_05",
                 rule_name="Insufficient Evidence Safeguard",
@@ -285,9 +294,9 @@ class RuleEngine:
                 severity="LOW",
                 conditions_evaluated=EXPERT_RULES_CATALOG[4].conditions,
                 conditions_matched=matched_conds,
-                evidence_references=["Evidence payload too brief for conclusive forensic analysis"],
+                evidence_references=["Evidence payload too brief or visual text unreadable for conclusive forensic analysis"],
                 resulting_action=EXPERT_RULES_CATALOG[4].action,
-                explanation="To maintain high scientific integrity, CyberShield AI refrains from guessing when submitted input lacks sufficient diagnostic indicators."
+                explanation=explanation
             ))
 
         # Rule 6 — Protective 2FA Advisory Directive (RULE_HARMFUL_06)
