@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "evaluation_date": "2026-10-29T00:32:19.460047",
+    "evaluation_date": "2026-10-29T21:40:17.464336",
     "models_evaluated": {
       "mode_a_url": "RandomForestClassifier (100 estimators, max_depth=12, StandardScaler)",
       "mode_b_phishing_text": "MultinomialNB (TfidfVectorizer sublinear_tf, ngrams 1-2)",
@@ -11,24 +11,24 @@
   "mode_a_url": {
     "metrics": {
       "total_samples": 50,
-      "true_positives": 25,
-      "true_negatives": 25,
-      "false_positives": 0,
-      "false_negatives": 0,
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0,
-      "false_positive_rate": 0.0,
-      "false_negative_rate": 0.0,
+      "true_positives": 24,
+      "true_negatives": 24,
+      "false_positives": 1,
+      "false_negatives": 1,
+      "accuracy": 0.96,
+      "precision": 0.96,
+      "recall": 0.96,
+      "f1_score": 0.96,
+      "false_positive_rate": 0.04,
+      "false_negative_rate": 0.04,
       "confusion_matrix": [
         [
-          25,
-          0
+          24,
+          1
         ],
         [
-          0,
-          25
+          1,
+          24
         ]
       ]
     },
@@ -210,8 +210,8 @@
       {
         "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
         "ground_truth": "Legitimate",
-        "prediction": "Legitimate",
-        "correct": true,
+        "prediction": "Phishing",
+        "correct": false,
         "risk_score": null,
         "probability": null,
         "type": "benign_docs"
@@ -399,8 +399,8 @@
       {
         "url": "http://a2vcr.info/WYmoR8t0IPS",
         "ground_truth": "Phishing",
-        "prediction": "Phishing",
-        "correct": true,
+        "prediction": "Legitimate",
+        "correct": false,
         "risk_score": null,
         "probability": null,
         "type": "user_provided_smishing_url"
@@ -1100,14 +1100,16 @@
         "image": "phish_bank_login.png",
         "ground_truth": "Phishing",
         "ocr_text_length": 117,
-        "extracted_urls": [],
+        "extracted_urls": [
+          "http://hbLcom.pk.customer-login.top/login"
+        ],
         "verdict": "PHISHING",
         "correct": true
       },
       {
         "image": "phish_survey_smishing.png",
         "ground_truth": "Phishing",
-        "ocr_text_length": 110,
+        "ocr_text_length": 143,
         "extracted_urls": [],
         "verdict": "PHISHING",
         "correct": true
@@ -1115,7 +1117,7 @@
       {
         "image": "benign_chat_dinner.png",
         "ground_truth": "Legitimate",
-        "ocr_text_length": 76,
+        "ocr_text_length": 82,
         "extracted_urls": [],
         "verdict": "LIKELY_LEGITIMATE",
         "correct": true
@@ -1123,7 +1125,7 @@
       {
         "image": "benign_university_timetable.png",
         "ground_truth": "Legitimate",
-        "ocr_text_length": 117,
+        "ocr_text_length": 125,
         "extracted_urls": [],
         "verdict": "LIKELY_LEGITIMATE",
         "correct": true
@@ -1131,7 +1133,7 @@
       {
         "image": "phish_bisp_lottery.png",
         "ground_truth": "Phishing",
-        "ocr_text_length": 65,
+        "ocr_text_length": 110,
         "extracted_urls": [],
         "verdict": "PHISHING",
         "correct": true
@@ -1139,7 +1141,7 @@
       {
         "image": "benign_uber_receipt.png",
         "ground_truth": "Legitimate",
-        "ocr_text_length": 111,
+        "ocr_text_length": 129,
         "extracted_urls": [],
         "verdict": "LIKELY_LEGITIMATE",
         "correct": true
@@ -1147,7 +1149,7 @@
       {
         "image": "phish_fedex_fee.png",
         "ground_truth": "Phishing",
-        "ocr_text_length": 72,
+        "ocr_text_length": 133,
         "extracted_urls": [],
         "verdict": "PHISHING",
         "correct": true
@@ -1155,7 +1157,7 @@
       {
         "image": "benign_reminder_dentist.png",
         "ground_truth": "Legitimate",
-        "ocr_text_length": 96,
+        "ocr_text_length": 120,
         "extracted_urls": [],
         "verdict": "LIKELY_LEGITIMATE",
         "correct": true
@@ -1163,15 +1165,17 @@
       {
         "image": "phish_pta_block.png",
         "ground_truth": "Phishing",
-        "ocr_text_length": 103,
-        "extracted_urls": [],
+        "ocr_text_length": 115,
+        "extracted_urls": [
+          "http://pta-blccked-sim.xyz"
+        ],
         "verdict": "PHISHING",
         "correct": true
       },
       {
         "image": "benign_weather_forecast.png",
         "ground_truth": "Legitimate",
-        "ocr_text_length": 117,
+        "ocr_text_length": 114,
         "extracted_urls": [],
         "verdict": "LIKELY_LEGITIMATE",
         "correct": true
@@ -1195,8 +1199,10 @@
       {
         "image": "User Real Amazon Smishing Capture",
         "ground_truth": "Phishing",
-        "ocr_text_length": 151,
-        "extracted_urls": [],
+        "ocr_text_length": 149,
+        "extracted_urls": [
+          "http://a2vcr.info/WYmoR8tOlPS"
+        ],
         "verdict": "PHISHING",
         "correct": true
       }

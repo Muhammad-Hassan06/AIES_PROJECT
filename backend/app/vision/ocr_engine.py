@@ -1,5 +1,6 @@
 import re
 import io
+import os
 import time
 import base64
 import asyncio
@@ -9,7 +10,7 @@ from PIL import Image
 from app.core.security import validate_image_header
 from app.core.config import settings
 
-URL_REGEX = r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|pk|xyz|top|info|live|online|site|co|io|biz|ru|cn)[^\s<>\"']*)"
+URL_REGEX = r"(https?://[^\s<>\"']+|www\.[^\s<>\"']+|[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|pk|xyz|top|info|live|online|site|co|io|biz|ru|cn|gov|edu)[^\s<>\"']*)"
 
 SUSPICIOUS_LOGIN_KEYWORDS = [
     "sign in", "login", "password", "username", "enter pin", "otp verification",
@@ -35,6 +36,15 @@ class ScreenshotOCREngine:
     def _check_tesseract(self):
         try:
             import pytesseract
+            default_win_paths = [
+                r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                os.path.expanduser(r"~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe")
+            ]
+            for p in default_win_paths:
+                if os.path.exists(p):
+                    pytesseract.pytesseract.tesseract_cmd = p
+                    break
             pytesseract.get_tesseract_version()
             self.tesseract_available = True
         except Exception:
@@ -46,6 +56,35 @@ class ScreenshotOCREngine:
             self.winocr_available = True
         except Exception:
             self.winocr_available = False
+
+    def _prepare_image_for_ocr(self, img: Image.Image) -> Tuple[Image.Image, float, Tuple[int, int]]:
+        """
+        Safely flattens alpha transparency onto white and applies adaptive Lanczos upscaling.
+        Returns: (preprocessed_img, scale_factor, (orig_w, orig_h))
+        """
+        orig_w, orig_h = img.size
+
+        # Handle RGBA / transparency safely: Composite over a solid white canvas
+        if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+            background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+            converted = img.convert("RGBA")
+            background.paste(converted, (0, 0), converted)
+            cleaned_img = background.convert("RGB")
+        elif img.mode != "RGB":
+            cleaned_img = img.convert("RGB")
+        else:
+            cleaned_img = img
+
+        scale_factor = 1.0
+        if orig_w < 1400 or orig_h < 900:
+            scale_factor = max(1.5, min(3.0, 1600.0 / max(1, max(orig_w, orig_h))))
+            new_w = int(orig_w * scale_factor)
+            new_h = int(orig_h * scale_factor)
+            ocr_img = cleaned_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        else:
+            ocr_img = cleaned_img
+
+        return ocr_img, scale_factor, (orig_w, orig_h)
 
     def process_screenshot_base64(self, base64_str: str, filename: Optional[str] = "screenshot.png") -> Dict[str, Any]:
         start_time = time.time()
@@ -97,20 +136,10 @@ class ScreenshotOCREngine:
                 "latency_ms": 0.0
             }
 
+        ocr_prep_img, scale_factor, (width, height) = self._prepare_image_for_ocr(img)
+
         extracted_text = ""
         engine_name = "Embedded OCR Pattern Parser"
-
-        # Adaptive preprocessing: Upscale small or low-resolution images with Lanczos interpolation
-        # This dramatically enhances character segmentation and fidelity for Windows Native OCR & Tesseract
-        scale_factor = 1.0
-        if width < 1400 or height < 900:
-            scale_factor = max(2.0, min(3.0, 1600.0 / max(1, max(width, height))))
-            ocr_prep_img = img.resize(
-                (int(width * scale_factor), int(height * scale_factor)),
-                Image.Resampling.LANCZOS
-            )
-        else:
-            ocr_prep_img = img
 
         ocr_lines = []
         # Tier 1: Windows Native OCR (built into Windows 10/11)
@@ -277,7 +306,8 @@ class ScreenshotOCREngine:
         found_urls = re.findall(URL_REGEX, extracted_text, re.IGNORECASE) if extracted_text else []
         cleaned_urls = []
         for u in found_urls:
-            u_clean = u.strip().rstrip(".,;:)-_$\\/'\"")
+            u_clean = u.strip().rstrip(".,;:)-_$\\/'\"`*<>[]{}")
+            u_clean = re.sub(r"\s+", "", u_clean)
             if not u_clean.startswith("http"):
                 u_clean = "http://" + u_clean
             if u_clean not in cleaned_urls:
@@ -320,7 +350,9 @@ class ScreenshotOCREngine:
         vf_result = visual_forensics_engine.analyze_screenshot(
             image_bytes=image_bytes,
             extracted_text=extracted_text,
-            ocr_lines=ocr_lines
+            ocr_lines=ocr_lines,
+            scale_factor=scale_factor,
+            extracted_urls=cleaned_urls
         )
 
         latency = (time.time() - start_time) * 1000.0

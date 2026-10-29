@@ -111,6 +111,17 @@ export async function analyzeMessageDirect(text) {
   });
 }
 
+export async function analyzeScreenshotDirect(screenshotBase64, filename = 'screenshot.png') {
+  return request('/analyze/screenshot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      screenshot_base64: screenshotBase64,
+      filename: filename
+    }),
+  });
+}
+
 // ---------------- Grounded RAG ----------------
 
 export async function queryRAG(query, language = 'en') {

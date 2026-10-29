@@ -8,8 +8,55 @@ KNOWN_LEGITIMATE_DOMAINS = {
     "gov.pk", "pakistan.gov.pk", "pkcert.gov.pk", "nccia.gov.pk", "fbr.gov.pk",
     "bisp.gov.pk", "nadra.gov.pk", "pta.gov.pk", "sbp.org.pk",
     "hbl.com", "ubldigital.com", "meezanbank.com", "bankalfalah.com", "mcb.com.pk",
-    "jazzcash.com.pk", "easypaisa.com.pk", "daraz.pk"
+    "jazzcash.com.pk", "easypaisa.com.pk", "daraz.pk",
+    "chase.com", "bankofamerica.com", "bofa.com", "wellsfargo.com", "citi.com",
+    "citibank.com", "paypal.com", "netflix.com", "amazon.com", "dhl.com", "fedex.com"
 }
+
+BRAND_OFFICIAL_DOMAINS = {
+    "hbl": ["hbl.com", "habibbank.com"],
+    "ubl": ["ubldigital.com", "ubl.com.pk"],
+    "meezan": ["meezanbank.com"],
+    "bank alfalah": ["bankalfalah.com"],
+    "mcb": ["mcb.com.pk"],
+    "easypaisa": ["easypaisa.com.pk"],
+    "jazzcash": ["jazzcash.com.pk"],
+    "bisp": ["bisp.gov.pk"],
+    "nadra": ["nadra.gov.pk"],
+    "fbr": ["fbr.gov.pk"],
+    "pakistan post": ["pakpost.gov.pk"],
+    "chase": ["chase.com"],
+    "bank of america": ["bankofamerica.com", "bofa.com"],
+    "bank america": ["bankofamerica.com", "bofa.com"],
+    "wells fargo": ["wellsfargo.com"],
+    "citibank": ["citi.com", "citibank.com"],
+    "paypal": ["paypal.com"],
+    "apple": ["apple.com", "icloud.com"],
+    "microsoft": ["microsoft.com", "live.com", "office.com"],
+    "netflix": ["netflix.com"],
+    "amazon": ["amazon.com", "amazon.co.uk"],
+    "google": ["google.com", "accounts.google.com"],
+    "dhl": ["dhl.com"],
+    "fedex": ["fedex.com"]
+}
+
+def is_brand_aligned_with_url(text: str, url: str) -> bool:
+    """
+    Checks if a detected brand name is consistent with the visible/extracted URL.
+    Returns True if the URL belongs to the official brand domain.
+    """
+    if not url:
+        return False
+    parsed = urlparse(url if "://" in url else "http://" + url)
+    hostname = (parsed.hostname or "").lower()
+
+    text_lower = text.lower()
+    for brand, domains in BRAND_OFFICIAL_DOMAINS.items():
+        if brand in text_lower:
+            for d in domains:
+                if hostname == d or hostname.endswith("." + d):
+                    return True
+    return False
 
 KNOWN_MALICIOUS_PATTERNS = [
     "bisp-funds", "jeeto-pakistan", "hbl-verify", "easypaisa-bonus", "jazzcash-lottery",

@@ -387,11 +387,15 @@ class RuleEngine:
 
         # Rule 8 — Pakistani Public Program & Bank Impersonation (RULE_PAK_08)
         # Also fires on OCR-detected Pakistani brand impersonation with login/credential cues
+        from app.intelligence.external_intel import is_brand_aligned_with_url
+        effective_url = ocr_urls[0] if ocr_urls else (url_result.get("url") if url_result else "")
+        pk_entities = pk_context if pk_context else [
+            b for b in PK_BRANDS if b in ocr_full_text or b in ocr_brand_text
+        ]
+        pk_brand_aligned = is_brand_aligned_with_url(" ".join(pk_entities + ocr_keywords), effective_url)
+
         pk_ocr_trigger = ocr_detected_pk_brand and (ocr_has_login_cue or otp_requested or prize_claimed or fee_requested)
-        if (pk_context and (has_url or fee_requested or otp_requested or prize_claimed)) or pk_ocr_trigger:
-            pk_entities = pk_context if pk_context else [
-                b for b in PK_BRANDS if b in ocr_full_text or b in ocr_brand_text
-            ]
+        if ((pk_context and (has_url or fee_requested or otp_requested or prize_claimed)) or pk_ocr_trigger) and not pk_brand_aligned:
             matched_conds = [
                 f"Pakistani institutional entities identified: {', '.join(pk_entities) if pk_entities else 'Detected via OCR visual scan'}",
                 "Non-standard transaction, advance fee, or credential prompt associated with public entity"
@@ -444,19 +448,21 @@ class RuleEngine:
             ))
 
         # Rule 11 — International Bank & Financial Brand Impersonation (RULE_INTL_11)
-        # Fires when OCR or NLP detects an international bank/fintech brand with login cues in the screenshot
+        # Fires when OCR or NLP detects an international bank/fintech brand with login cues on unverified/mismatched domains
         nlp_intl_brand = any(
             brand in (" ".join(nlp_categories) + str(nlp_result)).lower()
             for brand in ["bank of america", "chase", "wells fargo", "citibank", "paypal", "barclays", "hsbc"]
         ) if has_nlp else False
-        if (ocr_detected_intl_brand and (ocr_has_login_cue or otp_requested)) or nlp_intl_brand:
-            intl_brands_found = [
-                b for b in INTL_BANK_BRANDS
-                if b in ocr_full_text or b in ocr_brand_text
-            ]
+        intl_brands_found = [
+            b for b in INTL_BANK_BRANDS
+            if b in ocr_full_text or b in ocr_brand_text
+        ]
+        intl_brand_aligned = is_brand_aligned_with_url(" ".join(intl_brands_found + ocr_keywords), effective_url)
+
+        if ((ocr_detected_intl_brand and (ocr_has_login_cue or otp_requested)) or nlp_intl_brand) and not intl_brand_aligned:
             matched_conds = [
                 f"International financial institution brand(s) detected: {', '.join(intl_brands_found) if intl_brands_found else 'Detected via NLP'}",
-                "Login form, security alert, or credential prompt visible in screenshot"
+                "Login form, security alert, or credential prompt visible on unverified or third-party destination"
             ]
             triggered.append(TriggeredRule(
                 rule_id="RULE_INTL_11",
@@ -467,10 +473,11 @@ class RuleEngine:
                 conditions_matched=matched_conds,
                 evidence_references=[
                     f"Brands identified: {', '.join(intl_brands_found) if intl_brands_found else 'NLP detection'}",
+                    f"Destination URL: {effective_url or 'Unspecified'}",
                     f"OCR engine: {vision_result.get('ocr_engine', 'N/A') if vision_result else 'N/A'}"
                 ],
                 resulting_action=EXPERT_RULES_CATALOG[10].action,
-                explanation="This screenshot impersonates a major financial institution. Attackers create pixel-perfect fake login pages for banks like Bank of America, Chase, or PayPal to steal credentials. Never enter your password on a page you navigated to from a text message or email link."
+                explanation="This screenshot impersonates a major financial institution on unverified infrastructure. Attackers create pixel-perfect fake login pages for banks like Bank of America, Chase, or PayPal to steal credentials. Never enter your password on a page you navigated to from a text message or email link."
             ))
 
         return triggered

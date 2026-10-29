@@ -155,7 +155,8 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
             {/* Overlaid Normalized Spatial Bounding Boxes */}
             <div className="absolute inset-0 pointer-events-none">
               {filteredRegions.map((r) => {
-                const [ymin, xmin, ymax, xmax] = r.bounding_box;
+                const box = r.bounding_box || r.box || [0, 0, 0, 0];
+                const [ymin, xmin, ymax, xmax] = box;
                 const topPct = (ymin * 100).toFixed(2);
                 const leftPct = (xmin * 100).toFixed(2);
                 const widthPct = ((xmax - xmin) * 100).toFixed(2);
@@ -166,6 +167,7 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
                   bg: 'bg-yellow-500/15'
                 };
                 const isSelected = selectedRegionId === r.region_id;
+                const displayText = r.extracted_text || r.detected_text || r.label || '';
 
                 return (
                   <div
@@ -184,7 +186,7 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
                         ? 'ring-4 ring-teal-400 ring-offset-1 z-20 scale-[1.02]'
                         : 'hover:border-white hover:ring-2 hover:ring-white/80 z-10'
                     }`}
-                    title={`${r.category}: ${r.extracted_text}`}
+                    title={`${r.category}: ${displayText}`}
                   >
                     <span className="absolute -top-3.5 left-0 px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-slate-900 text-white shadow-xs whitespace-nowrap">
                       {r.region_id}
@@ -223,7 +225,7 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
                   OCR Text Extracted:
                 </span>
                 <div className="p-2 rounded bg-white border border-stone-200 font-mono text-slate-800 text-[11px]">
-                  "{selectedRegion.extracted_text || '[No readable text]'}"
+                  "{selectedRegion.extracted_text || selectedRegion.detected_text || selectedRegion.label || '[No readable text]'}"
                 </div>
               </div>
 
@@ -232,7 +234,7 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
                   Grounded Forensic Rationale:
                 </span>
                 <p className="text-slate-700 leading-relaxed bg-white p-2.5 rounded border border-stone-200">
-                  {selectedRegion.grounded_rationale}
+                  {selectedRegion.grounded_rationale || selectedRegion.evidence_explanation || 'No rationale available.'}
                 </p>
               </div>
 
@@ -256,7 +258,7 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
               {showCoordinates && (
                 <div className="p-2 rounded bg-stone-900 text-emerald-400 font-mono text-[10px] space-y-0.5">
                   <div>Normalized Box [ymin, xmin, ymax, xmax]:</div>
-                  <div>[{selectedRegion.bounding_box.map(n => n.toFixed(3)).join(', ')}]</div>
+                  <div>[{(selectedRegion.bounding_box || selectedRegion.box || [0,0,0,0]).map(n => Number(n).toFixed(3)).join(', ')}]</div>
                 </div>
               )}
             </div>
@@ -281,6 +283,33 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
           </div>
         </div>
       </div>
+
+      {/* Verbatim OCR Extracted Text Inspection */}
+      {visionResult.extracted_text && (
+        <div className="p-4 rounded-xl border border-stone-200 bg-stone-50 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+              Verbatim OCR-Extracted Screenshot Text:
+            </span>
+            <span className="font-mono text-[10px] text-slate-500">
+              {visionResult.extracted_text.length} characters • {visionResult.extracted_urls?.length || 0} URL(s)
+            </span>
+          </div>
+          <pre className="p-3 rounded-lg bg-white border border-stone-200 text-slate-800 font-mono text-[11px] whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+            {visionResult.extracted_text}
+          </pre>
+          {visionResult.extracted_urls && visionResult.extracted_urls.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-semibold text-slate-500">Extracted URLs:</span>
+              {visionResult.extracted_urls.map((u, idx) => (
+                <span key={idx} className="px-2 py-0.5 rounded bg-teal-50 border border-teal-200 text-teal-900 font-mono text-[10px]">
+                  {u}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Region List Table */}
       {regions.length > 0 ? (
@@ -313,10 +342,10 @@ export default function VisualForensicsCanvas({ visionResult, imageSource }) {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 font-mono text-[11px] text-slate-800 max-w-[180px] truncate">
-                    {r.extracted_text || '--'}
+                    {r.extracted_text || r.detected_text || r.label || '--'}
                   </td>
                   <td className="py-2.5 px-3 text-slate-600 text-[11px] max-w-[280px]">
-                    {r.grounded_rationale}
+                    {r.grounded_rationale || r.evidence_explanation || '--'}
                   </td>
                   <td className="py-2.5 px-3 font-mono text-[11px] font-bold">
                     <span className={r.severity === 'CRITICAL' ? 'text-red-700' : 'text-amber-700'}>

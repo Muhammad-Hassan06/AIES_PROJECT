@@ -98,12 +98,18 @@ def sanitize_evidence_text(text: str) -> Tuple[str, bool]:
 
     return sanitized, injection_detected
 
+MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
+
 def validate_image_header(file_bytes: bytes) -> Tuple[bool, str]:
     """
-    Validates magic bytes of uploaded image files.
+    Validates magic bytes, file size, and image boundaries.
+    Rejects corrupted, oversized, or unsupported image files.
     """
-    if len(file_bytes) < 8:
+    if not file_bytes or len(file_bytes) < 8:
         return False, "File too small or empty"
+
+    if len(file_bytes) > MAX_IMAGE_SIZE_BYTES:
+        return False, f"File exceeds maximum allowed upload size ({MAX_IMAGE_SIZE_BYTES // (1024 * 1024)}MB)."
 
     # PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
     if file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):

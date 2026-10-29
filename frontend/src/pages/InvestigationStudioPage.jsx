@@ -89,18 +89,24 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage('File exceeds 10MB limit');
+      setErrorMessage('File exceeds 10MB limit. Please upload a smaller image.');
+      addToast('File exceeds 10MB limit', 'error');
       return;
     }
+
+    // Clear stale investigation report immediately so users don't see previous results
+    if (onClearReport) onClearReport();
+    setErrorMessage('');
 
     setScreenshotName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
       setScreenshotBase64(event.target.result);
+      addToast(`Screenshot loaded: ${file.name}`, 'info');
     };
     reader.readAsDataURL(file);
   };
@@ -354,7 +360,7 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
               <label className="block text-xs font-semibold text-slate-700">
                 Evidence Screenshot (Image)
               </label>
-              <div className="p-6 border-2 border-dashed border-stone-200 hover:border-teal-600 rounded-xl bg-stone-50/70 text-center transition-colors">
+              <div className="p-4 border-2 border-dashed border-stone-200 hover:border-teal-600 rounded-xl bg-stone-50/70 text-center transition-colors">
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -362,14 +368,34 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
                   className="hidden"
                   id="screenshot-file-input"
                 />
-                <label htmlFor="screenshot-file-input" className="cursor-pointer block text-xs text-slate-500">
-                  <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-                  {screenshotName ? (
-                    <span className="text-teal-800 font-bold block">{screenshotName}</span>
-                  ) : (
+                {screenshotBase64 ? (
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="relative max-h-48 rounded-lg overflow-hidden border border-stone-300 shadow-xs inline-block">
+                      <img src={screenshotBase64} alt="Screenshot Preview" className="max-h-48 w-auto object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScreenshotBase64('');
+                          setScreenshotName('');
+                          if (onClearReport) onClearReport();
+                        }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/80 text-white hover:bg-slate-950 transition-colors cursor-pointer"
+                        title="Remove screenshot"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <span className="text-teal-800 font-bold text-xs">{screenshotName}</span>
+                    <label htmlFor="screenshot-file-input" className="cursor-pointer text-[11px] text-teal-700 hover:underline">
+                      Replace screenshot
+                    </label>
+                  </div>
+                ) : (
+                  <label htmlFor="screenshot-file-input" className="cursor-pointer block text-xs text-slate-500 py-4">
+                    <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                     <span>Click to select screenshot or drag & drop (PNG, JPG, WebP up to 10MB)</span>
-                  )}
-                </label>
+                  </label>
+                )}
               </div>
             </div>
           )}

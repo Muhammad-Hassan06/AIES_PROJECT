@@ -68,7 +68,9 @@ class ExplainableVisualForensics:
         self,
         image_bytes: bytes,
         extracted_text: str = "",
-        ocr_lines: Optional[List[Dict[str, Any]]] = None
+        ocr_lines: Optional[List[Dict[str, Any]]] = None,
+        scale_factor: float = 1.0,
+        extracted_urls: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         start_time = time.time()
 
@@ -86,9 +88,17 @@ class ExplainableVisualForensics:
                 "latency_ms": 0.0
             }
 
+        scaled_w = width * scale_factor
+        scaled_h = height * scale_factor
+
         # 1. Aspect ratio & Layout classification
         aspect_ratio = round(width / max(1, height), 2)
         layout_type = self._classify_layout(width, height, aspect_ratio, extracted_text)
+
+        # Domain authentication check against recognized brands
+        from app.intelligence.external_intel import is_brand_aligned_with_url
+        visible_url = extracted_urls[0] if (extracted_urls and len(extracted_urls) > 0) else ""
+        brand_verified_safe = is_brand_aligned_with_url(extracted_text, visible_url)
 
         # 2. Extract genuine bounding boxes from OCR lines / words
         suspicious_regions: List[Dict[str, Any]] = []
@@ -106,21 +116,29 @@ class ExplainableVisualForensics:
                 # Check credential keywords
                 for kw in CREDENTIAL_KEYWORDS:
                     if kw in line_lower:
-                        box = self._extract_bounding_box_from_words(words, kw, width, height)
+                        box = self._extract_bounding_box_from_words(words, kw, width, height, scaled_w, scaled_h)
                         if box:
+                            norm_box = box["normalized"]
+                            explanation = (
+                                f"Authentication prompt ('{kw}') on verified official domain."
+                                if brand_verified_safe else
+                                f"Detected visual authentication prompt soliciting sensitive credentials ('{kw}'). "
+                                "High-risk indicator on unverified landing pages."
+                            )
+                            sev = "LOW" if brand_verified_safe else "CRITICAL"
                             suspicious_regions.append({
                                 "region_id": f"reg_{region_counter}",
-                                "box": box["normalized"],
+                                "box": norm_box,
+                                "bounding_box": norm_box,
                                 "pixel_box": box["pixel"],
                                 "category": CATEGORY_CREDENTIAL_PROMPT,
                                 "label": "Credential Harvesting Field / Prompt",
                                 "confidence": 0.94,
                                 "detected_text": line_text[:60],
-                                "evidence_explanation": (
-                                    f"Detected visual authentication prompt soliciting sensitive credentials ('{kw}'). "
-                                    "Commonly deployed on spoofed landing pages to harvest login credentials."
-                                ),
-                                "severity": "CRITICAL"
+                                "extracted_text": line_text[:60],
+                                "evidence_explanation": explanation,
+                                "grounded_rationale": explanation,
+                                "severity": sev
                             })
                             region_counter += 1
                             break
@@ -128,21 +146,29 @@ class ExplainableVisualForensics:
                 # Check brand keywords
                 for brand in BRAND_KEYWORDS:
                     if brand in line_lower:
-                        box = self._extract_bounding_box_from_words(words, brand, width, height)
+                        box = self._extract_bounding_box_from_words(words, brand, width, height, scaled_w, scaled_h)
                         if box:
+                            norm_box = box["normalized"]
+                            explanation = (
+                                f"Verified institutional identity asset ('{brand.title()}')."
+                                if brand_verified_safe else
+                                f"Visual header/logo region claims identity of '{brand.title()}'. "
+                                "High-risk indicator when coupled with external/unverified hosting infrastructure."
+                            )
+                            sev = "LOW" if brand_verified_safe else "HIGH"
                             suspicious_regions.append({
                                 "region_id": f"reg_{region_counter}",
-                                "box": box["normalized"],
+                                "box": norm_box,
+                                "bounding_box": norm_box,
                                 "pixel_box": box["pixel"],
                                 "category": CATEGORY_IMPERSONATED_BRAND,
                                 "label": f"Impersonated Brand Asset ({brand.title()})",
                                 "confidence": 0.90,
                                 "detected_text": line_text[:60],
-                                "evidence_explanation": (
-                                    f"Visual header/logo region claims identity of '{brand.title()}'. "
-                                    "High-risk indicator when coupled with external hosting infrastructure."
-                                ),
-                                "severity": "HIGH"
+                                "extracted_text": line_text[:60],
+                                "evidence_explanation": explanation,
+                                "grounded_rationale": explanation,
+                                "severity": sev
                             })
                             region_counter += 1
                             break
@@ -150,20 +176,25 @@ class ExplainableVisualForensics:
                 # Check urgency keywords
                 for urg in URGENCY_KEYWORDS:
                     if urg in line_lower:
-                        box = self._extract_bounding_box_from_words(words, urg, width, height)
+                        box = self._extract_bounding_box_from_words(words, urg, width, height, scaled_w, scaled_h)
                         if box:
+                            norm_box = box["normalized"]
+                            explanation = (
+                                f"Panic-inducing urgency cue ('{urg}') coercing rapid victim compliance "
+                                "before security verification can take place."
+                            )
                             suspicious_regions.append({
                                 "region_id": f"reg_{region_counter}",
-                                "box": box["normalized"],
+                                "box": norm_box,
+                                "bounding_box": norm_box,
                                 "pixel_box": box["pixel"],
                                 "category": CATEGORY_COERCIVE_TIMER,
                                 "label": "Coercive Urgency / Intimidation Banner",
                                 "confidence": 0.88,
                                 "detected_text": line_text[:60],
-                                "evidence_explanation": (
-                                    f"Panic-inducing urgency cue ('{urg}') coercing rapid victim compliance "
-                                    "before security verification can take place."
-                                ),
+                                "extracted_text": line_text[:60],
+                                "evidence_explanation": explanation,
+                                "grounded_rationale": explanation,
                                 "severity": "HIGH"
                             })
                             region_counter += 1
@@ -172,20 +203,25 @@ class ExplainableVisualForensics:
                 # Check CTA keywords
                 for cta in CTA_KEYWORDS:
                     if cta in line_lower:
-                        box = self._extract_bounding_box_from_words(words, cta, width, height)
+                        box = self._extract_bounding_box_from_words(words, cta, width, height, scaled_w, scaled_h)
                         if box:
+                            norm_box = box["normalized"]
+                            explanation = (
+                                f"High-salience call-to-action button ('{cta}') guiding the victim "
+                                "to submit data or transfer execution."
+                            )
                             suspicious_regions.append({
                                 "region_id": f"reg_{region_counter}",
-                                "box": box["normalized"],
+                                "box": norm_box,
+                                "bounding_box": norm_box,
                                 "pixel_box": box["pixel"],
                                 "category": CATEGORY_DECEPTIVE_CTA,
                                 "label": "Deceptive Action Button (Call-to-Action)",
                                 "confidence": 0.82,
                                 "detected_text": line_text[:60],
-                                "evidence_explanation": (
-                                    f"High-salience call-to-action button ('{cta}') guiding the victim "
-                                    "to submit data or transfer execution."
-                                ),
+                                "extracted_text": line_text[:60],
+                                "evidence_explanation": explanation,
+                                "grounded_rationale": explanation,
                                 "severity": "MEDIUM"
                             })
                             region_counter += 1
@@ -196,24 +232,27 @@ class ExplainableVisualForensics:
         for fb in detected_form_boxes[:3]:
             # Only add if not heavily overlapping with an existing credential prompt region
             if not self._overlaps_existing(fb["normalized"], suspicious_regions):
+                norm_box = fb["normalized"]
+                explanation = "Detected graphical input field with high contrast borders, consistent with credential or OTP entry boxes."
                 suspicious_regions.append({
                     "region_id": f"reg_{region_counter}",
-                    "box": fb["normalized"],
+                    "box": norm_box,
+                    "bounding_box": norm_box,
                     "pixel_box": fb["pixel"],
                     "category": CATEGORY_INPUT_FIELD,
                     "label": "Interactive Form Input Field",
                     "confidence": 0.78,
                     "detected_text": "[Visual Input Box Contour]",
-                    "evidence_explanation": (
-                        "Detected graphical input field with high contrast borders, consistent with credential or OTP entry boxes."
-                    ),
-                    "severity": "MEDIUM"
+                    "extracted_text": "[Visual Input Box Contour]",
+                    "evidence_explanation": explanation,
+                    "grounded_rationale": explanation,
+                    "severity": "LOW" if brand_verified_safe else "MEDIUM"
                 })
                 region_counter += 1
 
         # 4. Fallback spatial estimation if OCR lines had no coordinates but text was recognized
         if not suspicious_regions and text_lower:
-            suspicious_regions = self._generate_grounded_spatial_regions(text_lower, width, height)
+            suspicious_regions = self._generate_grounded_spatial_regions(text_lower, width, height, brand_verified_safe)
 
         # 5. Genuine, Validated Visual Phishing Model (Score calculation grounded in visual signals)
         phishing_prob, legit_likelihood, visual_evidence = self._compute_visual_risk(
@@ -221,7 +260,9 @@ class ExplainableVisualForensics:
             layout_type=layout_type,
             suspicious_regions=suspicious_regions,
             width=width,
-            height=height
+            height=height,
+            brand_verified_safe=brand_verified_safe,
+            has_visible_url=bool(visible_url)
         )
 
         latency = (time.time() - start_time) * 1000.0
@@ -233,7 +274,7 @@ class ExplainableVisualForensics:
             "is_legitimate_likelihood": round(legit_likelihood, 3),
             "suspicious_regions": suspicious_regions,
             "visual_evidence_ledger": visual_evidence,
-            "forensics_summary": self._generate_forensics_summary(phishing_prob, layout_type, suspicious_regions),
+            "forensics_summary": self._generate_forensics_summary(phishing_prob, layout_type, suspicious_regions, brand_verified_safe),
             "latency_ms": round(latency, 2)
         }
 
@@ -260,11 +301,18 @@ class ExplainableVisualForensics:
         words: Any,
         keyword: str,
         img_w: int,
-        img_h: int
+        img_h: int,
+        scaled_w: float = 0.0,
+        scaled_h: float = 0.0
     ) -> Optional[Dict[str, Any]]:
-        """Extracts normalized [ymin, xmin, ymax, xmax] coordinates from word bounding rects."""
+        """Extracts normalized [ymin, xmin, ymax, xmax] coordinates from word bounding rects, scaling to original viewport."""
         if not words:
             return None
+
+        if scaled_w <= 0.0:
+            scaled_w = float(img_w)
+        if scaled_h <= 0.0:
+            scaled_h = float(img_h)
 
         def get_text(w):
             return getattr(w, "text", "") if hasattr(w, "text") else (w.get("text", "") if isinstance(w, dict) else str(w))
@@ -290,34 +338,43 @@ class ExplainableVisualForensics:
                 return None
             matching_words = rects
 
-        # Compute bounding union
+        # Compute bounding union in OCR coordinate space
         min_x = min(get_val(r, "x") for r in matching_words)
         min_y = min(get_val(r, "y") for r in matching_words)
         max_x = max(get_val(r, "x") + get_val(r, "width") for r in matching_words)
         max_y = max(get_val(r, "y") + get_val(r, "height") for r in matching_words)
 
+        # Scale down from OCR coordinate space to original pixel space
+        scale_x = img_w / max(1.0, scaled_w)
+        scale_y = img_h / max(1.0, scaled_h)
+
+        orig_min_x = max(0, min_x * scale_x)
+        orig_min_y = max(0, min_y * scale_y)
+        orig_max_x = min(img_w, max_x * scale_x)
+        orig_max_y = min(img_h, max_y * scale_y)
+
         # Padding (5% margins for aesthetic framing)
-        pad_x = max(2, (max_x - min_x) * 0.05)
-        pad_y = max(2, (max_y - min_y) * 0.10)
+        pad_x = max(2, (orig_max_x - orig_min_x) * 0.05)
+        pad_y = max(2, (orig_max_y - orig_min_y) * 0.10)
 
-        min_x = max(0, min_x - pad_x)
-        min_y = max(0, min_y - pad_y)
-        max_x = min(img_w, max_x + pad_x)
-        max_y = min(img_h, max_y + pad_y)
+        final_min_x = max(0, orig_min_x - pad_x)
+        final_min_y = max(0, orig_min_y - pad_y)
+        final_max_x = min(img_w, orig_max_x + pad_x)
+        final_max_y = min(img_h, orig_max_y + pad_y)
 
-        # Normalized coordinates: [ymin, xmin, ymax, xmax] in 0.0 - 1.0
-        norm_ymin = round(min_y / max(1, img_h), 4)
-        norm_xmin = round(min_x / max(1, img_w), 4)
-        norm_ymax = round(max_y / max(1, img_h), 4)
-        norm_xmax = round(max_x / max(1, img_w), 4)
+        # Normalized coordinates: [ymin, xmin, ymax, xmax] strictly in 0.0 - 1.0
+        norm_ymin = round(final_min_y / max(1, img_h), 4)
+        norm_xmin = round(final_min_x / max(1, img_w), 4)
+        norm_ymax = round(final_max_y / max(1, img_h), 4)
+        norm_xmax = round(final_max_x / max(1, img_w), 4)
 
         return {
             "normalized": [norm_ymin, norm_xmin, norm_ymax, norm_xmax],
             "pixel": {
-                "x": int(min_x),
-                "y": int(min_y),
-                "width": int(max_x - min_x),
-                "height": int(max_y - min_y)
+                "x": int(final_min_x),
+                "y": int(final_min_y),
+                "width": int(final_max_x - final_min_x),
+                "height": int(final_max_y - final_min_y)
             }
         }
 
@@ -393,7 +450,7 @@ class ExplainableVisualForensics:
                     return True
         return False
 
-    def _generate_grounded_spatial_regions(self, text_lower: str, width: int, height: int) -> List[Dict[str, Any]]:
+    def _generate_grounded_spatial_regions(self, text_lower: str, width: int, height: int, brand_verified_safe: bool = False) -> List[Dict[str, Any]]:
         """
         When line bounding box arrays are unavailable, computes spatial bounding bands
         grounded in known webpage layout conventions (Header brand = top 15%, Login inputs = center 35-65%).
@@ -404,16 +461,25 @@ class ExplainableVisualForensics:
         # Check brands
         for brand in BRAND_KEYWORDS:
             if brand in text_lower:
+                box = [0.03, 0.08, 0.16, 0.92]
+                explanation = (
+                    f"Verified institutional brand identity ('{brand.title()}')."
+                    if brand_verified_safe else
+                    f"Header region displays '{brand.title()}' branding."
+                )
                 regions.append({
                     "region_id": f"reg_{reg_id}",
-                    "box": [0.03, 0.08, 0.16, 0.92],
+                    "box": box,
+                    "bounding_box": box,
                     "pixel_box": {"x": int(width * 0.08), "y": int(height * 0.03), "width": int(width * 0.84), "height": int(height * 0.13)},
                     "category": CATEGORY_IMPERSONATED_BRAND,
                     "label": f"Prominent Brand Banner ({brand.title()})",
                     "confidence": 0.85,
                     "detected_text": brand.title(),
-                    "evidence_explanation": f"Header region displays '{brand.title()}' branding.",
-                    "severity": "HIGH"
+                    "extracted_text": brand.title(),
+                    "evidence_explanation": explanation,
+                    "grounded_rationale": explanation,
+                    "severity": "LOW" if brand_verified_safe else "HIGH"
                 })
                 reg_id += 1
                 break
@@ -421,16 +487,25 @@ class ExplainableVisualForensics:
         # Check credentials
         for cred in CREDENTIAL_KEYWORDS:
             if cred in text_lower:
+                box = [0.38, 0.12, 0.58, 0.88]
+                explanation = (
+                    f"Authentication prompt ('{cred}') on verified domain."
+                    if brand_verified_safe else
+                    f"Central viewport contains authentication prompt soliciting '{cred}'."
+                )
                 regions.append({
                     "region_id": f"reg_{reg_id}",
-                    "box": [0.38, 0.12, 0.58, 0.88],
+                    "box": box,
+                    "bounding_box": box,
                     "pixel_box": {"x": int(width * 0.12), "y": int(height * 0.38), "width": int(width * 0.76), "height": int(height * 0.20)},
                     "category": CATEGORY_CREDENTIAL_PROMPT,
                     "label": "Central Login & Password Solicitation Block",
                     "confidence": 0.92,
                     "detected_text": cred.title(),
-                    "evidence_explanation": f"Central viewport contains authentication prompt soliciting '{cred}'.",
-                    "severity": "CRITICAL"
+                    "extracted_text": cred.title(),
+                    "evidence_explanation": explanation,
+                    "grounded_rationale": explanation,
+                    "severity": "LOW" if brand_verified_safe else "CRITICAL"
                 })
                 reg_id += 1
                 break
@@ -438,15 +513,20 @@ class ExplainableVisualForensics:
         # Check urgency
         for urg in URGENCY_KEYWORDS:
             if urg in text_lower:
+                box = [0.20, 0.05, 0.34, 0.95]
+                explanation = f"Prominent warning banner coercing victim with urgency cue ('{urg}')."
                 regions.append({
                     "region_id": f"reg_{reg_id}",
-                    "box": [0.20, 0.05, 0.34, 0.95],
+                    "box": box,
+                    "bounding_box": box,
                     "pixel_box": {"x": int(width * 0.05), "y": int(height * 0.20), "width": int(width * 0.90), "height": int(height * 0.14)},
                     "category": CATEGORY_COERCIVE_TIMER,
                     "label": "Coercive Action Warning Banner",
                     "confidence": 0.86,
                     "detected_text": urg.title(),
-                    "evidence_explanation": f"Prominent warning banner coercing victim with urgency cue ('{urg}').",
+                    "extracted_text": urg.title(),
+                    "evidence_explanation": explanation,
+                    "grounded_rationale": explanation,
                     "severity": "HIGH"
                 })
                 reg_id += 1
@@ -460,66 +540,95 @@ class ExplainableVisualForensics:
         layout_type: str,
         suspicious_regions: List[Dict[str, Any]],
         width: int,
-        height: int
+        height: int,
+        brand_verified_safe: bool = False,
+        has_visible_url: bool = False
     ) -> Tuple[float, float, List[Dict[str, Any]]]:
         """
         Genuine probabilistic visual classifier.
-        Avoids hardcoding, integrates verifiable visual signals, and scores legitimate pages safely.
+        Avoids hardcoding, integrates verifiable visual signals, and calibrates for legitimate vs spoofed portals.
         """
         evidence_ledger = []
         base_threat = 0.05
 
         categories_present = set(r["category"] for r in suspicious_regions)
 
-        # Signal 1: Credential Prompt
-        if CATEGORY_CREDENTIAL_PROMPT in categories_present:
-            base_threat += 0.45
+        # Condition A: If the brand is verified against official destination domain
+        if brand_verified_safe:
+            # Login on an official verified domain is legitimate functionality
+            base_threat = 0.05
             evidence_ledger.append({
-                "component": "VisualFormDetector",
-                "finding": "Credential harvesting fields identified in viewport",
-                "weight": "+45%",
-                "confidence": 0.94
+                "component": "VerifiedBrandDomainAuditor",
+                "finding": "Brand identity authenticated against official destination domain (No Impersonation)",
+                "weight": "-70% (Legitimate Domain Verification)",
+                "confidence": 0.95
             })
+            if CATEGORY_COERCIVE_TIMER in categories_present:
+                base_threat += 0.15
+                evidence_ledger.append({
+                    "component": "VisualUrgencyDetector",
+                    "finding": "Urgency cues detected on verified domain",
+                    "weight": "+15%",
+                    "confidence": 0.85
+                })
+        else:
+            # Signal 1: Credential Prompt
+            if CATEGORY_CREDENTIAL_PROMPT in categories_present:
+                if has_visible_url:
+                    base_threat += 0.45
+                    evidence_ledger.append({
+                        "component": "VisualFormDetector",
+                        "finding": "Credential harvesting fields identified on unverified domain",
+                        "weight": "+45%",
+                        "confidence": 0.94
+                    })
+                else:
+                    # No visible URL (cropped form or app capture) -> caution, but not definitive high fraud
+                    base_threat += 0.30
+                    evidence_ledger.append({
+                        "component": "VisualFormDetector",
+                        "finding": "Authentication input prompt without visible URL header (Unverified Portal)",
+                        "weight": "+30%",
+                        "confidence": 0.80
+                    })
 
-        # Signal 2: Impersonated Brand
-        if CATEGORY_IMPERSONATED_BRAND in categories_present:
-            base_threat += 0.25
-            evidence_ledger.append({
-                "component": "VisualBrandDetector",
-                "finding": "High-value commercial or public institution branding detected",
-                "weight": "+25%",
-                "confidence": 0.90
-            })
+            # Signal 2: Impersonated Brand
+            if CATEGORY_IMPERSONATED_BRAND in categories_present:
+                base_threat += 0.25
+                evidence_ledger.append({
+                    "component": "VisualBrandDetector",
+                    "finding": "Commercial or financial institution branding without domain authentication",
+                    "weight": "+25%",
+                    "confidence": 0.90
+                })
 
-        # Signal 3: Coercive Urgency / Intimidation
-        if CATEGORY_COERCIVE_TIMER in categories_present:
-            base_threat += 0.20
-            evidence_ledger.append({
-                "component": "VisualUrgencyDetector",
-                "finding": "Panic-inducing urgency or account block warning banner identified",
-                "weight": "+20%",
-                "confidence": 0.88
-            })
+            # Signal 3: Coercive Urgency / Intimidation
+            if CATEGORY_COERCIVE_TIMER in categories_present:
+                base_threat += 0.20
+                evidence_ledger.append({
+                    "component": "VisualUrgencyDetector",
+                    "finding": "Panic-inducing urgency or account block warning banner identified",
+                    "weight": "+20%",
+                    "confidence": 0.88
+                })
 
-        # Signal 4: Layout Co-occurrence
-        if layout_type in ("WEB_LOGIN_PORTAL", "MOBILE_BANKING_APP") and CATEGORY_CREDENTIAL_PROMPT in categories_present:
-            base_threat += 0.10
-            evidence_ledger.append({
-                "component": "LayoutAnalyzer",
-                "finding": f"Layout conforms to {layout_type} targeting user authentication credentials",
-                "weight": "+10%",
-                "confidence": 0.85
-            })
+            # Signal 4: Layout Co-occurrence
+            if layout_type in ("WEB_LOGIN_PORTAL", "MOBILE_BANKING_APP") and CATEGORY_CREDENTIAL_PROMPT in categories_present:
+                base_threat += 0.10
+                evidence_ledger.append({
+                    "component": "LayoutAnalyzer",
+                    "finding": f"Layout conforms to {layout_type} targeting user authentication credentials",
+                    "weight": "+10%",
+                    "confidence": 0.85
+                })
 
         # Signal 5: Legitimate Indicators Dampening
-        # If the screenshot exhibits hallmarks of legitimate informational sites
         legit_hits = sum(1 for ind in LEGITIMATE_INDICATORS if ind in text_lower)
-        if legit_hits >= 2 and CATEGORY_CREDENTIAL_PROMPT not in categories_present:
-            # Significant legitimate dampening
+        if legit_hits >= 2 and (brand_verified_safe or CATEGORY_CREDENTIAL_PROMPT not in categories_present):
             base_threat = max(0.02, base_threat - 0.35)
             evidence_ledger.append({
                 "component": "LegitimateIndicatorAuditor",
-                "finding": f"Detected {legit_hits} legitimate corporate/footer markers with zero credential solicitation",
+                "finding": f"Detected {legit_hits} legitimate corporate/footer markers with verified or neutral context",
                 "weight": "-35% (Legitimate Attenuation)",
                 "confidence": 0.90
             })
@@ -533,9 +642,16 @@ class ExplainableVisualForensics:
         self,
         prob: float,
         layout_type: str,
-        regions: List[Dict[str, Any]]
+        regions: List[Dict[str, Any]],
+        brand_verified_safe: bool = False
     ) -> str:
-        if prob >= 0.80:
+        if brand_verified_safe:
+            return (
+                f"Legitimate layout verified ({1.0 - prob:.1%}). "
+                f"Layout analyzed as {layout_type}. Branding is consistent with official verified domain; "
+                "credential input fields correspond to expected official authentication functionality."
+            )
+        elif prob >= 0.80:
             return (
                 f"High-confidence visual phishing detected ({prob:.1%}). "
                 f"Layout analyzed as {layout_type} containing {len(regions)} flagged region(s), "
