@@ -125,6 +125,19 @@ EXPERT_RULES_CATALOG: List[RuleDefinition] = [
             "Hostname consists of numeric IP address rather than registered DNS name"
         ],
         action="Flag High Warning: Raw IP Target. Legitimate services do not direct customers to naked IP addresses."
+    ),
+    RuleDefinition(
+        rule_id="RULE_INTL_11",
+        name="International Bank & Financial Brand Impersonation",
+        category="Institutional Impersonation",
+        severity="CRITICAL",
+        description="Detects fraudulent use of international banking brands (Bank of America, Chase, Wells Fargo, PayPal, etc.) combined with login prompts or security alert language visible in screenshot evidence.",
+        conditions=[
+            "OCR or NLP detects an international financial institution brand name",
+            "Screenshot depicts login form, security alert, or credential request",
+            "Domain or screenshot source does not match the official institution"
+        ],
+        action="Flag Critical Warning: International Financial Brand Impersonation Detected. Do not enter credentials. Contact the official institution directly."
     )
 ]
 
@@ -166,12 +179,46 @@ class RuleEngine:
         ocr_urls = vision_result.get("extracted_urls", []) if has_ocr else []
         ocr_keywords = vision_result.get("detected_keywords", []) if has_ocr else []
 
+        # OCR brand/institution signals — parsed from the visual_indicators list
+        # e.g. "Brand Identity Impersonation: bank of america, chase"
+        ocr_brand_text = " ".join(vision_result.get("visual_indicators", [])).lower() if vision_result else ""
+        # Also include raw detected_keywords for broader coverage
+        ocr_keywords_text = " ".join(ocr_keywords).lower()
+
+        INTL_BANK_BRANDS = [
+            "bank of america", "bankofamerica", "chase", "wells fargo", "wellsfargo",
+            "citibank", "barclays", "hsbc", "standard chartered", "td bank",
+            "us bank", "capital one", "american express", "amex"
+        ]
+        PK_BRANDS = [
+            "hbl", "ubl", "meezan", "bank alfalah", "mcb", "bisp", "ehsaas",
+            "nadra", "fbr", "state bank", "easypaisa", "jazzcash"
+        ]
+
+        ocr_full_text = (vision_result.get("extracted_text", "") or "").lower() if vision_result else ""
+
+        ocr_detected_intl_brand = any(
+            b in ocr_brand_text or b in ocr_full_text
+            for b in INTL_BANK_BRANDS
+        )
+        ocr_detected_pk_brand = any(
+            b in ocr_brand_text or b in ocr_full_text
+            for b in PK_BRANDS
+        )
+        ocr_has_login_cue = bool(ocr_keywords) or any(
+            kw in ocr_full_text for kw in [
+                "sign in", "login", "password", "verify", "confirm", "otp",
+                "reset", "account", "security", "unauthorized", "unusual", "suspicious"
+            ]
+        )
+
         # Common cross-modal indicators
         otp_requested = (
             "Credential Harvesting" in nlp_categories
             or "otp_requested" in manual
             or "password_requested" in manual
             or any("otp" in kw for kw in ocr_keywords)
+            or ocr_has_login_cue  # OCR-extracted login/credential form cues
         )
         urgency_present = (
             "Urgency & Pressure" in nlp_categories
@@ -273,7 +320,8 @@ class RuleEngine:
 
         # Rule 5 — Insufficient Evidence Safeguard (RULE_INSUFF_05)
         text_len = len(nlp_result.get("analyzed_text", "")) if has_nlp else 0
-        if not has_url and text_len < 15 and not has_ocr and not manual:
+        has_ocr_signals = has_ocr and (bool(ocr_keywords) or bool(ocr_urls) or ocr_detected_intl_brand or ocr_detected_pk_brand)
+        if not has_url and text_len < 15 and not has_ocr_signals and not manual:
             if input_type == "screenshot":
                 matched_conds = [
                     "Screenshot image submitted but no readable text or URLs could be extracted",
@@ -338,9 +386,14 @@ class RuleEngine:
             ))
 
         # Rule 8 — Pakistani Public Program & Bank Impersonation (RULE_PAK_08)
-        if pk_context and (has_url or fee_requested or otp_requested or prize_claimed):
+        # Also fires on OCR-detected Pakistani brand impersonation with login/credential cues
+        pk_ocr_trigger = ocr_detected_pk_brand and (ocr_has_login_cue or otp_requested or prize_claimed or fee_requested)
+        if (pk_context and (has_url or fee_requested or otp_requested or prize_claimed)) or pk_ocr_trigger:
+            pk_entities = pk_context if pk_context else [
+                b for b in PK_BRANDS if b in ocr_full_text or b in ocr_brand_text
+            ]
             matched_conds = [
-                f"Pakistani institutional entities identified: {', '.join(pk_context)}",
+                f"Pakistani institutional entities identified: {', '.join(pk_entities) if pk_entities else 'Detected via OCR visual scan'}",
                 "Non-standard transaction, advance fee, or credential prompt associated with public entity"
             ]
             triggered.append(TriggeredRule(
@@ -350,7 +403,7 @@ class RuleEngine:
                 severity="CRITICAL",
                 conditions_evaluated=EXPERT_RULES_CATALOG[7].conditions,
                 conditions_matched=matched_conds,
-                evidence_references=[f"Entities: {', '.join(pk_context)}"],
+                evidence_references=[f"Entities: {', '.join(pk_entities) if pk_entities else 'Visual scan'}"],
                 resulting_action=EXPERT_RULES_CATALOG[7].action,
                 explanation="Scammers frequently impersonate public social-support programs (BISP, Ehsaas), tax authorities (FBR), or financial institutions (Easypaisa, JazzCash, HBL) to exploit vulnerable citizens."
             ))
@@ -388,6 +441,36 @@ class RuleEngine:
                 evidence_references=[f"URL: {url_result.get('url')}"],
                 resulting_action=EXPERT_RULES_CATALOG[9].action,
                 explanation="Standard web destinations use registered DNS domain names with TLS certificates. Naked IP addresses are commonly deployed in disposable phishing infrastructure."
+            ))
+
+        # Rule 11 — International Bank & Financial Brand Impersonation (RULE_INTL_11)
+        # Fires when OCR or NLP detects an international bank/fintech brand with login cues in the screenshot
+        nlp_intl_brand = any(
+            brand in (" ".join(nlp_categories) + str(nlp_result)).lower()
+            for brand in ["bank of america", "chase", "wells fargo", "citibank", "paypal", "barclays", "hsbc"]
+        ) if has_nlp else False
+        if (ocr_detected_intl_brand and (ocr_has_login_cue or otp_requested)) or nlp_intl_brand:
+            intl_brands_found = [
+                b for b in INTL_BANK_BRANDS
+                if b in ocr_full_text or b in ocr_brand_text
+            ]
+            matched_conds = [
+                f"International financial institution brand(s) detected: {', '.join(intl_brands_found) if intl_brands_found else 'Detected via NLP'}",
+                "Login form, security alert, or credential prompt visible in screenshot"
+            ]
+            triggered.append(TriggeredRule(
+                rule_id="RULE_INTL_11",
+                rule_name="International Bank & Financial Brand Impersonation",
+                category="Institutional Impersonation",
+                severity="CRITICAL",
+                conditions_evaluated=EXPERT_RULES_CATALOG[10].conditions,
+                conditions_matched=matched_conds,
+                evidence_references=[
+                    f"Brands identified: {', '.join(intl_brands_found) if intl_brands_found else 'NLP detection'}",
+                    f"OCR engine: {vision_result.get('ocr_engine', 'N/A') if vision_result else 'N/A'}"
+                ],
+                resulting_action=EXPERT_RULES_CATALOG[10].action,
+                explanation="This screenshot impersonates a major financial institution. Attackers create pixel-perfect fake login pages for banks like Bank of America, Chase, or PayPal to steal credentials. Never enter your password on a page you navigated to from a text message or email link."
             ))
 
         return triggered

@@ -13,12 +13,12 @@ TFIDF_PATH = os.path.join(MODEL_DIR, "nlp_tfidf.joblib")
 SPAN_PATTERNS = [
     {
         "category": "Credential Harvesting",
-        "pattern": r"\b(otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|cnic number|card number|cvv|seed phrase|recovery seed|mpin)\b",
+        "pattern": r"\b(otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|cnic number|card number|cvv|seed phrase|recovery seed|mpin|verify your account|confirm your identity|verify identity|enter your card|account locked|access your account|sign in to|click here to verify|update your information|confirm account|account alert|unusual sign.?in|unauthorized access|new device detected|suspicious login|verify now|re.?verify|update billing|enter pin|reset password|reset your password)\b",
         "explanation": "Requesting one-time passwords, PINs, or credentials directly violates legitimate authentication protocols."
     },
     {
         "category": "Urgency & Pressure",
-        "pattern": r"\b(urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be (blocked|closed|terminated)|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in)\b",
+        "pattern": r"\b(urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be (blocked|closed|terminated)|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in|your account has been|limited access|restricted|we noticed|security alert|verify within|action required|review required)\b",
         "explanation": "Artificial deadlines and panic inducement coerce victims into acting before verifying authenticity."
     },
     {
@@ -33,12 +33,12 @@ SPAN_PATTERNS = [
     },
     {
         "category": "Prize & Lottery Lure",
-        "pattern": r"\b(won rs\.? ?\d+|prize of rs|cash prize|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey|scholarship|laptop scholarship|free iphone|100 gb free)\b",
+        "pattern": r"\b(won rs\.? ?\d+|prize of rs|cash prize|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey|scholarship|laptop scholarship|free iphone|100 gb free|cash grant|grant approved|beneficiary|financial assistance)\b",
         "explanation": "Unsolicited cash rewards, survey freebies, or lottery wins entice victims into fraudulent fee payment or credential sharing."
     },
     {
         "category": "Institutional Impersonation",
-        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|nadra|fbr|pta|pakistan post|tcs courier|fedex|dhl|ups|jazzcash|easypaisa|amazon|microsoft|apple|google|netflix|paypal|binance|metamask|state life)\b",
+        "pattern": r"\b(hbl|ubl|meezan bank|bank alfalah|mcb|allied bank|state bank of pakistan|sbp|bisp|ehsaas program|ehsaas|nadra|fbr|pta|pakistan post|tcs courier|fedex|dhl|ups|jazzcash|easypaisa|amazon|microsoft|apple|google|netflix|paypal|binance|metamask|state life|bank of america|bankofamerica|chase bank|wells fargo|wellsfargo|citibank|barclays|hsbc|standard chartered|td bank|us bank|capital one|american express|amex)\b",
         "explanation": "Invoking reputable brands, institutions, or public programs gives false credibility to the communication."
     },
     {
