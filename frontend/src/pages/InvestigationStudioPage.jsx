@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, FileText, Image as ImageIcon, Mail, 
-  Send, RefreshCw, Clipboard, AlertCircle, 
+  Send, RefreshCw, Clipboard, AlertCircle, AlertTriangle,
   Layers, Scale, Cpu, FolderArchive, X, Sparkles
 } from 'lucide-react';
 import RiskVerdictCard from '../components/RiskVerdictCard';
