@@ -204,36 +204,46 @@ class ScreenshotOCREngine:
             # 3a. Try Gemini Vision if API key is configured with robust multi-model fallback & timeout
             if settings.GEMINI_API_KEY:
                 candidate_models = [
-                    settings.GEMINI_MODEL,
-                    "gemini-2.5-flash-lite",
+                    "gemini-3.5-flash-lite",
+                    "gemini-3.5-flash",
+                    "gemini-flash-lite-latest",
                     "gemini-flash-latest",
-                    "gemini-3.8-flash",
+                    settings.GEMINI_MODEL,
+                    "gemini-3.1-flash-lite",
                     "gemini-2.5-flash"
                 ]
                 seen_models = set()
+                
+                # Prepare image bytes for genai Part
+                img_byte_buf = io.BytesIO()
+                ocr_prep_img.save(img_byte_buf, format="PNG")
+                img_part_bytes = img_byte_buf.getvalue()
+
                 for m_cand in candidate_models:
                     if not m_cand or m_cand in seen_models:
                         continue
                     seen_models.add(m_cand)
                     try:
                         from google import genai
+                        from google.genai import types
                         client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                        img_part = types.Part.from_bytes(data=img_part_bytes, mime_type="image/png")
                         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                             future = pool.submit(
                                 client.models.generate_content,
                                 model=m_cand,
-                                contents=[ocr_prep_img, "Extract all visible text, URLs, numbers, email addresses, and words from this screenshot verbatim. Do not explain, return only the raw text:"]
+                                contents=[img_part, "Extract all visible text, URLs, numbers, email addresses, and words from this screenshot verbatim. Do not explain, return only the raw text:"]
                             )
                             v_res = future.result(timeout=6.0)
-                        if v_res and v_res.text and len(v_res.text.strip()) > 3:
-                            extracted_text = v_res.text.strip()
-                            engine_name = f"Gemini Vision ({m_cand})"
+                        if v_res:
+                            raw_t = (v_res.text or "").strip()
+                            if len(raw_t) > 0 and raw_t.lower() not in ("none", "no text", "no text found", "empty", "no readable text"):
+                                extracted_text = raw_t
+                                engine_name = f"Gemini Vision ({m_cand})"
+                            # Model responded successfully without network/quota error; no need to burn additional fallback quotas
                             break
                     except Exception as exc:
-                        err_str = str(exc).lower()
-                        if "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str:
-                            # Quota is exhausted for the project today, avoid wasting time retrying candidate models
-                            break
+                        # Free Tier quotas and model lifecycles are per-model; continue to next fallback model
                         continue
 
             # 3b. Try Groq LLaMA 3.2 Vision if Groq key is configured
