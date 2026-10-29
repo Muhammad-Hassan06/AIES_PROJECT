@@ -112,6 +112,7 @@ class ScreenshotOCREngine:
         else:
             ocr_prep_img = img
 
+        ocr_lines = []
         # Tier 1: Windows Native OCR (built into Windows 10/11)
         if not extracted_text and self.winocr_available:
             try:
@@ -127,9 +128,17 @@ class ScreenshotOCREngine:
                 except RuntimeError:
                     res = asyncio.run(winocr.recognize_pil(ocr_img))
 
-                if res and res.text and len(res.text.strip()) > 0:
+                if res and isinstance(res, dict):
+                    if res.get("text") and len(res["text"].strip()) > 0:
+                        extracted_text = res["text"].strip()
+                        engine_name = "Windows Native OCR (winocr)"
+                    if "lines" in res:
+                        ocr_lines = res["lines"]
+                elif hasattr(res, "text") and res.text and len(res.text.strip()) > 0:
                     extracted_text = res.text.strip()
                     engine_name = "Windows Native OCR (winocr)"
+                    if hasattr(res, "lines"):
+                        ocr_lines = res.lines
             except Exception:
                 pass
 
@@ -306,6 +315,14 @@ class ScreenshotOCREngine:
             if aspect_ratio < 0.6:
                 visual_indicators.append("Mobile Screenshot Aspect Ratio (Typical for SMS/WhatsApp captures)")
 
+        # Feature 2: Explainable Visual Forensics Engine
+        from app.vision.visual_forensics import visual_forensics_engine
+        vf_result = visual_forensics_engine.analyze_screenshot(
+            image_bytes=image_bytes,
+            extracted_text=extracted_text,
+            ocr_lines=ocr_lines
+        )
+
         latency = (time.time() - start_time) * 1000.0
 
         return {
@@ -315,6 +332,12 @@ class ScreenshotOCREngine:
             "detected_keywords": detected_keywords,
             "visual_indicators": visual_indicators,
             "ocr_engine": engine_name,
+            "layout_type": vf_result.get("layout_type", "GENERIC_GRAPHIC"),
+            "visual_phishing_probability": vf_result.get("visual_phishing_probability", 0.0),
+            "is_legitimate_likelihood": vf_result.get("is_legitimate_likelihood", 1.0),
+            "suspicious_regions": vf_result.get("suspicious_regions", []),
+            "visual_evidence_ledger": vf_result.get("visual_evidence_ledger", []),
+            "forensics_summary": vf_result.get("forensics_summary", ""),
             "latency_ms": round(latency, 2)
         }
 

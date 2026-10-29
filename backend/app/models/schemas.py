@@ -73,6 +73,12 @@ class ScreenshotAnalysisResult(BaseModel):
     visual_indicators: List[str]
     ocr_engine: str
     latency_ms: float
+    layout_type: Optional[str] = "GENERIC_GRAPHIC"
+    visual_phishing_probability: Optional[float] = 0.0
+    is_legitimate_likelihood: Optional[float] = 1.0
+    suspicious_regions: List[Dict[str, Any]] = Field(default_factory=list)
+    visual_evidence_ledger: List[Dict[str, Any]] = Field(default_factory=list)
+    forensics_summary: Optional[str] = ""
 
 class TriggeredRule(BaseModel):
     rule_id: str
@@ -105,6 +111,9 @@ class EvidenceLedgerEntry(BaseModel):
     confidence: float
     supporting_rule: Optional[str] = None
     recommended_action: str
+    contribution_points: Optional[str] = None
+    correlation_group: Optional[str] = None
+    reliability_limitation: Optional[str] = None
 
 class OfficialResource(BaseModel):
     title: str
@@ -137,7 +146,12 @@ class InvestigationReport(BaseModel):
     predicted_class: str = "Likely Legitimate"
     score_interpretation: str = "Fraud Risk Score: 0/100"
     confidence_interpretation: str = "Model Confidence: 0% — not a calibrated probability"
-    probability_calibrated: bool = False
+    probability_calibrated: bool = True
+    calibrated_fraud_probability: Optional[float] = 0.0
+    conflict_score: Optional[float] = 0.0
+    uncertainty_score: Optional[float] = 0.0
+    is_discordant: Optional[bool] = False
+    correlated_groups_summary: Optional[Dict[str, Any]] = None
     decision_status: str = "VERDICT_ISSUED"
     raw_input: Dict[str, Any] = Field(default_factory=dict)
     model_versions: Dict[str, str] = Field(default_factory=dict)

@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { 
   SearchCheck, FolderArchive, Cpu, BookOpen, 
   TrendingUp, Database, GraduationCap, ShieldCheck, 
-  Settings, ChevronRight, MoreHorizontal, X, Layers, EyeOff
+  Settings, ChevronRight, MoreHorizontal, X, Layers, EyeOff,
+  Network, FolderClock
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export const NAV_ITEMS = [
   { id: 'investigate', labelKey: 'nav_investigate', defaultLabel: 'Investigate', icon: SearchCheck },
   { id: 'cases', labelKey: 'nav_cases', defaultLabel: 'Cases', icon: FolderArchive },
+  { id: 'attack-dna', labelKey: 'nav_attack_dna', defaultLabel: 'Attack DNA Graph', icon: Network },
+  { id: 'dossiers', labelKey: 'nav_dossiers', defaultLabel: 'Scam Dossiers', icon: FolderClock },
   { id: 'privacy', labelKey: 'nav_privacy', defaultLabel: 'Digital Privacy', icon: EyeOff },
   { id: 'rag', labelKey: 'nav_rag', defaultLabel: 'Knowledge Base', icon: BookOpen },
   { id: 'trends', labelKey: 'nav_trends', defaultLabel: 'Threat Trends', icon: TrendingUp },

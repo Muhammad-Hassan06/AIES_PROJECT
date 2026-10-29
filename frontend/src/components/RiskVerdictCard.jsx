@@ -128,6 +128,19 @@ export default function RiskVerdictCard({
         </div>
       </div>
 
+      {/* Cross-Modal Conflict & Discordance Alert (if detected) */}
+      {(report.conflict_score >= 0.40 || report.is_discordant) && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start space-x-2.5">
+          <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-bold">Cross-Modal Discordance Detected (Conflict: {Math.round((report.conflict_score || 0.5) * 100)}%):</span>
+            <p className="leading-relaxed text-amber-800 text-[11px]">
+              Forensic analytical components produced divergent signals (e.g. lexical threat vs clean reputation lists). CyberShield AI preserved uncertainty rather than forcing artificial consensus.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid: Risk Meter Gauge + Plain Language Verdict + Actions */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
         
@@ -142,13 +155,34 @@ export default function RiskVerdictCard({
                 {predictedClass}
               </strong>
             </div>
+
+            {/* Tripartite Metrics Display */}
+            <div className="w-full grid grid-cols-3 gap-1 pt-2 mt-2 border-t border-stone-200 text-[10px] text-center">
+              <div className="p-1 rounded bg-white border border-stone-200">
+                <span className="text-slate-400 block">Confidence</span>
+                <span className="font-bold font-mono text-slate-800">{confidencePct}%</span>
+              </div>
+              <div className="p-1 rounded bg-white border border-stone-200">
+                <span className="text-slate-400 block">Fraud Prob</span>
+                <span className="font-bold font-mono text-slate-800">
+                  {report.calibrated_fraud_probability !== undefined 
+                    ? `${Math.round(report.calibrated_fraud_probability * 100)}%` 
+                    : `${fraudRiskScore}%`}
+                </span>
+              </div>
+              <div className="p-1 rounded bg-white border border-stone-200">
+                <span className="text-slate-400 block">Risk Score</span>
+                <span className="font-bold font-mono text-red-700">{fraudRiskScore}/100</span>
+              </div>
+            </div>
+
             {isTechnicalMode && (
               <>
-                <div className="text-[11px] text-slate-500">
-                  {report.confidence_interpretation || `Model Confidence: ${confidencePct}% — not a calibrated probability`}
+                <div className="text-[11px] text-slate-500 mt-1">
+                  {report.confidence_interpretation || `Model Confidence: ${confidencePct}% — Certainty in diagnostic extraction`}
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  {report.probability_calibrated ? 'Calibrated Probability' : 'Uncalibrated Model Output (Operational Decision Rules Applied)'}
+                  {report.probability_calibrated ? 'Calibrated Probability' : 'Sub-additive Anti-Double-Counting Applied'}
                 </div>
               </>
             )}

@@ -222,3 +222,57 @@ export async function getPrivacyOverview() {
   return request('/privacy/overview');
 }
 
+// ---------------- Feature 1: Attack DNA — Scam Connection Graph ----------------
+
+export async function getScamConnectionGraph(caseId = null, minConfidence = 0.5) {
+  const params = new URLSearchParams();
+  if (caseId) params.append('case_id', caseId);
+  if (minConfidence !== undefined) params.append('min_confidence', minConfidence);
+  const q = params.toString() ? `?${params.toString()}` : '';
+  return request(`/graph/scam-connections${q}`);
+}
+
+export async function getAttackDNACampaigns() {
+  return request('/graph/campaigns');
+}
+
+export async function getCaseDNA(caseId) {
+  return request(`/graph/case-dna/${caseId}`);
+}
+
+// ---------------- Feature 4: Scam Timeline & Evidence Dossier ----------------
+
+export async function listDossiers(limit = 50) {
+  return request(`/dossiers?limit=${limit}`);
+}
+
+export async function createDossier(payload) {
+  return request('/dossiers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getDossier(dossierId) {
+  return request(`/dossiers/${dossierId}`);
+}
+
+export async function deleteDossier(dossierId) {
+  return request(`/dossiers/${dossierId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function addDossierEvent(dossierId, payload) {
+  return request(`/dossiers/${dossierId}/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function exportDossier(dossierId) {
+  return request(`/dossiers/${dossierId}/export`);
+}
+

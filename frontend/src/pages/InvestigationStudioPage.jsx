@@ -13,6 +13,7 @@ import ShareSafeSummaryModal from '../components/ShareSafeSummaryModal';
 import AgentStepper from '../components/AgentStepper';
 import AgentWorkflowGraph from '../components/AgentWorkflowGraph';
 import DemoScenarioCards from '../components/DemoScenarioCards';
+import VisualForensicsCanvas from '../components/VisualForensicsCanvas';
 import { createInvestigation } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
@@ -561,20 +562,21 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
               </CollapsibleSection>
             )}
 
-            {/* 4. Screenshot Vision & OCR */}
-            {currentReport.vision_result?.extracted_text && (
+            {/* 4. Screenshot Vision & OCR Forensics */}
+            {(currentReport.vision_result?.extracted_text || currentReport.vision_result?.suspicious_regions) && (
               <CollapsibleSection
                 id="screenshot-analysis"
-                title={t('sec_screenshot')}
+                title={t('sec_screenshot') || 'Visual Phishing Forensics & OCR'}
                 icon={ImageIcon}
-                badge={currentReport.vision_result.ocr_engine}
+                badge={currentReport.vision_result.layout_type || currentReport.vision_result.ocr_engine}
                 badgeType="neutral"
-                defaultOpen={false}
+                defaultOpen={true}
               >
-                <div className="pt-2 space-y-3">
-                  <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 text-xs font-mono text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                    {currentReport.vision_result.extracted_text}
-                  </div>
+                <div className="pt-2">
+                  <VisualForensicsCanvas
+                    visionResult={currentReport.vision_result}
+                    imageSource={screenshotBase64}
+                  />
                 </div>
               </CollapsibleSection>
             )}

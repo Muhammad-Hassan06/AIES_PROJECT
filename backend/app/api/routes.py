@@ -610,4 +610,112 @@ def reset_synthetic_fixtures_endpoint():
     count = reset_synthetic_fixtures()
     return {"status": "reset", "fixtures_count": count}
 
+# ==============================================================================
+# Feature 1: Attack DNA — Scam Connection Graph Endpoints
+# ==============================================================================
+from app.analytics.connection_graph import attack_dna_graph
 
+@router.get("/graph/scam-connections")
+def get_scam_connections_graph(
+    case_id: Optional[str] = None,
+    min_confidence: float = 0.40
+):
+    """
+    Returns the Attack DNA scam connection graph:
+    - Nodes: Cases, Domains, Senders, Brands, Campaigns.
+    - Edges: Explainable exact matches and fuzzy similarities with explicit evidence references and confidence levels.
+    - Campaigns: Corroborated scam clusters that satisfy evidentiary sufficiency.
+    """
+    return attack_dna_graph.build_graph(
+        focus_case_id=case_id,
+        min_confidence=min_confidence
+    )
+
+@router.get("/graph/campaigns")
+def get_attack_dna_campaigns():
+    """Returns all corroborated scam campaigns discovered across stored investigations."""
+    graph = attack_dna_graph.build_graph()
+    return graph.get("campaigns", [])
+
+@router.get("/graph/case-dna/{case_id}")
+def get_case_dna_endpoint(case_id: str):
+    """Returns the atomic forensic indicators and connected graph neighborhood for a specific case."""
+    case = get_investigation_by_id(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    dna = attack_dna_graph.extract_case_dna(case)
+    graph = attack_dna_graph.build_graph(focus_case_id=case_id)
+    return {
+        "case_dna": dna,
+        "neighborhood": graph
+    }
+
+# ==============================================================================
+# Feature 4: Scam Timeline & Evidence Dossier Endpoints
+# ==============================================================================
+from app.analytics.dossier_service import dossier_service
+
+@router.get("/dossiers")
+def list_dossiers_endpoint():
+    """Lists all investigative dossiers."""
+    return dossier_service.list_dossiers()
+
+@router.post("/dossiers")
+def create_dossier_endpoint(payload: Dict[str, Any] = Body(...)):
+    """Creates a new investigative dossier and synthesizes timeline from linked cases."""
+    title = payload.get("title", "")
+    if not title:
+        raise HTTPException(status_code=400, detail="Missing required 'title' in payload")
+    return dossier_service.create_dossier(
+        title=title,
+        description=payload.get("description", ""),
+        target_institution=payload.get("target_institution", ""),
+        case_ids=payload.get("case_ids", []),
+        tags=payload.get("tags", [])
+    )
+
+@router.get("/dossiers/{dossier_id}")
+def get_dossier_endpoint(dossier_id: str):
+    """Retrieves full dossier including chronological timeline and linked case reports."""
+    dossier = dossier_service.get_dossier(dossier_id)
+    if not dossier:
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    return dossier
+
+@router.delete("/dossiers/{dossier_id}")
+def delete_dossier_endpoint(dossier_id: str):
+    """Deletes an investigative dossier."""
+    success = dossier_service.delete_dossier(dossier_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    return {"status": "success", "message": f"Dossier {dossier_id} deleted."}
+
+@router.post("/dossiers/{dossier_id}/events")
+def add_dossier_event_endpoint(dossier_id: str, payload: Dict[str, Any] = Body(...)):
+    """Adds a chronological event to an existing dossier timeline."""
+    title = payload.get("title", "")
+    description = payload.get("description", "")
+    ts = payload.get("event_timestamp") or datetime.datetime.now(datetime.timezone.utc).isoformat()
+    if not title or not description:
+        raise HTTPException(status_code=400, detail="Missing 'title' or 'description' in event payload")
+
+    return dossier_service.add_timeline_event(
+        dossier_id=dossier_id,
+        title=title,
+        description=description,
+        event_timestamp=ts,
+        timestamp_type=payload.get("timestamp_type", "EXACT_RECORDED"),
+        modality=payload.get("modality", "MESSAGE"),
+        case_id=payload.get("case_id"),
+        evidence_reference=payload.get("evidence_reference", ""),
+        risk_level=payload.get("risk_level", "HIGH"),
+        ordering_rationale=payload.get("ordering_rationale", "")
+    )
+
+@router.get("/dossiers/{dossier_id}/export")
+def export_dossier_endpoint(dossier_id: str):
+    """Generates comprehensive, source-backed forensic investigation dossier with SHA-256 fingerprint."""
+    report = dossier_service.export_dossier_report(dossier_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    return report

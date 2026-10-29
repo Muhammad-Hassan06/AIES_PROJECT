@@ -130,7 +130,13 @@ class AgenticInvestigationOrchestrator:
                     detected_keywords=ocr_out.get("detected_keywords", []),
                     visual_indicators=ocr_out.get("visual_indicators", []),
                     ocr_engine=ocr_out.get("ocr_engine", "OCR_Engine"),
-                    latency_ms=ocr_out.get("latency_ms", 0.0)
+                    latency_ms=ocr_out.get("latency_ms", 0.0),
+                    layout_type=ocr_out.get("layout_type", "GENERIC_GRAPHIC"),
+                    visual_phishing_probability=ocr_out.get("visual_phishing_probability", 0.0),
+                    is_legitimate_likelihood=ocr_out.get("is_legitimate_likelihood", 1.0),
+                    suspicious_regions=ocr_out.get("suspicious_regions", []),
+                    visual_evidence_ledger=ocr_out.get("visual_evidence_ledger", []),
+                    forensics_summary=ocr_out.get("forensics_summary", "")
                 )
                 trace.append(AgentStepEvent(
                     agent_id="agent_vision",
@@ -341,78 +347,43 @@ class AgenticInvestigationOrchestrator:
         ))
 
         # ====================================================================
-        # AGENT 7: Risk Assessment Agent
+        # AGENT 7: Risk Assessment & Evidence Fusion Agent
         # ====================================================================
         step_risk_start = time.time()
+        from app.analytics.evidence_fusion import evidence_fusion_engine
+        fusion_out = evidence_fusion_engine.fuse(
+            input_type=input_type.value,
+            url_result=url_result_obj.model_dump() if url_result_obj else None,
+            nlp_result=nlp_result_obj.model_dump() if nlp_result_obj else None,
+            vision_result=vision_result_obj.model_dump() if vision_result_obj else None,
+            threat_intel=intel_info if 'intel_info' in locals() else None,
+            triggered_rules=[r.model_dump() for r in triggered_rules_objs],
+            manual_indicators=manual_indicators or []
+        )
 
-        # Calculate calibrated risk level:
-        # Check rule severities first
-        rule_severities = [r.severity for r in triggered_rules_objs]
-        url_prob = url_result_obj.phishing_probability if url_result_obj else 0.0
-        nlp_risk = nlp_result_obj.risk_score if nlp_result_obj else 0.0
-
-        # Check Insufficient Evidence condition
-        is_insufficient = any(r.rule_id == "RULE_INSUFF_05" for r in triggered_rules_objs)
-
-        if is_insufficient:
-            final_risk = RiskLevel.INSUFFICIENT_EVIDENCE
-            fraud_risk_score = 0
-            model_confidence = 0.0
-            evidence_strength = "WEAK (Insufficient Diagnostic Indicators)"
-            predicted_class = "Insufficient Evidence / Needs Review"
-            decision_status = "INSUFFICIENT_EVIDENCE"
-            score_interpretation = "Fraud Risk Score: Indeterminate (Insufficient Evidence)"
-            confidence_interpretation = "Model Confidence: Insufficient data to evaluate"
-        elif "CRITICAL" in rule_severities or (url_prob >= 0.85 and nlp_risk >= 0.80):
-            final_risk = RiskLevel.CRITICAL
-            raw_threat_max = max(url_prob, nlp_risk)
-            fraud_risk_score = int(round(max(raw_threat_max, 0.90) * 100))
-            model_confidence = max(raw_threat_max, 0.92)
-            evidence_strength = "STRONG (Multi-modal corroboration)"
-            predicted_class = "Phishing / Fraudulent"
-            decision_status = "VERDICT_ISSUED"
-            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
-            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
-        elif "HIGH" in rule_severities or url_prob >= 0.70 or nlp_risk >= 0.70:
-            final_risk = RiskLevel.HIGH
-            raw_threat_max = max(url_prob, nlp_risk)
-            fraud_risk_score = int(round(max(raw_threat_max, 0.75) * 100))
-            model_confidence = max(raw_threat_max, 0.82)
-            evidence_strength = "SUBSTANTIAL"
-            predicted_class = "Phishing / Fraudulent"
-            decision_status = "VERDICT_ISSUED"
-            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
-            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
-        elif "MEDIUM" in rule_severities or url_prob >= 0.45 or nlp_risk >= 0.45:
-            final_risk = RiskLevel.MEDIUM
-            raw_threat_max = max(url_prob, nlp_risk)
-            fraud_risk_score = int(round(max(raw_threat_max, 0.45) * 100))
-            model_confidence = max(raw_threat_max, 0.65)
-            evidence_strength = "MODERATE"
-            predicted_class = "Suspicious / Potential Threat"
-            decision_status = "VERDICT_ISSUED"
-            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
-            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
-        else:
-            final_risk = RiskLevel.LOW
-            raw_threat_max = max(url_prob, nlp_risk)
-            fraud_risk_score = int(round(raw_threat_max * 100))
-            model_confidence = round(1.0 - raw_threat_max, 4)
-            evidence_strength = "LOW RISK"
-            predicted_class = "Likely Legitimate"
-            decision_status = "VERDICT_ISSUED"
-            score_interpretation = f"Fraud Risk Score: {fraud_risk_score}/100"
-            confidence_interpretation = f"Model Confidence: {int(round(model_confidence * 100))}% — not a calibrated probability"
+        final_risk = fusion_out["risk_level"]
+        fraud_risk_score = fusion_out["forensic_risk_score"]
+        model_confidence = fusion_out["overall_model_confidence"]
+        predicted_class = fusion_out["predicted_class"]
+        decision_status = fusion_out["decision_status"]
+        score_interpretation = fusion_out["score_interpretation"]
+        confidence_interpretation = fusion_out["confidence_interpretation"]
+        evidence_strength = (
+            "WEAK (Insufficient Diagnostic Indicators)" if final_risk == RiskLevel.INSUFFICIENT_EVIDENCE
+            else ("STRONG (Multi-modal corroboration)" if final_risk == RiskLevel.CRITICAL
+            else ("SUBSTANTIAL" if final_risk == RiskLevel.HIGH
+            else ("MODERATE" if final_risk == RiskLevel.MEDIUM else "LOW RISK")))
+        )
 
         step_risk_dur = (time.time() - step_risk_start) * 1000.0
 
         trace.append(AgentStepEvent(
             agent_id="agent_risk",
-            agent_name="7. Risk Assessment Agent",
+            agent_name="7. Risk Assessment & Evidence Fusion Agent",
             status=AgentStatus.COMPLETED,
             duration_ms=round(step_risk_dur, 2),
-            summary=f"Synthesized calibrated risk level: {final_risk.value} (Risk Score: {fraud_risk_score}/100, Confidence: {model_confidence:.1%}, Strength: {evidence_strength}).",
-            findings_count=1
+            summary=f"Fused evidence across modalities (Fraud Prob: {fusion_out['calibrated_fraud_probability']:.1%}, Risk Score: {fraud_risk_score}/100, Confidence: {model_confidence:.1%}, Conflict: {fusion_out['conflict_score']:.0%}).",
+            findings_count=len(fusion_out.get("traceable_evidence_ledger", []))
         ))
 
         # ====================================================================
@@ -444,6 +415,27 @@ class AgenticInvestigationOrchestrator:
             "The system does not submit complaints automatically to government bodies."
         ]
 
+        # Merge limitations from fusion engine
+        for lim in fusion_out.get("limitations", []):
+            if lim not in limitations:
+                limitations.append(lim)
+
+        # Incorporate traceable fusion ledger entries
+        for t_item in fusion_out.get("traceable_evidence_ledger", []):
+            ledger.append(EvidenceLedgerEntry(
+                finding=t_item["finding"],
+                evidence_source=t_item["source_name"],
+                observed_value=t_item["observed_value"],
+                analysis_component=t_item["source_id"],
+                timestamp=t_item["timestamp"],
+                confidence=t_item["raw_score"],
+                supporting_rule=None,
+                recommended_action="Inspect correlation with cross-modal findings",
+                contribution_points=t_item.get("contribution_points"),
+                correlation_group=t_item.get("correlation_group"),
+                reliability_limitation=t_item.get("reliability_limitation")
+            ))
+
         raw_input_data = {
             "url": url or "",
             "text": text or "",
@@ -456,7 +448,8 @@ class AgenticInvestigationOrchestrator:
             "url_classifier": "RandomForest-v1.0 (PhiUSIIL)",
             "nlp_classifier": "MultinomialNB-v1.0 (Pakistani Lures)",
             "expert_rules": "v1.2 (Symbolic IF-THEN)",
-            "ocr_engine": "Tesseract OCR v5.0",
+            "ocr_engine": "Tesseract OCR v5.0 / Windows Native",
+            "fusion_engine": "EvidenceFusionEngine v2.0 (Anti-Double-Counting)",
             "explainer": "Google Gemini 2.5 Flash / Fallback Synthesizer"
         }
 
@@ -484,7 +477,12 @@ class AgenticInvestigationOrchestrator:
             predicted_class=predicted_class,
             score_interpretation=score_interpretation,
             confidence_interpretation=confidence_interpretation,
-            probability_calibrated=False,
+            probability_calibrated=True,
+            calibrated_fraud_probability=fusion_out.get("calibrated_fraud_probability", 0.0),
+            conflict_score=fusion_out.get("conflict_score", 0.0),
+            uncertainty_score=fusion_out.get("uncertainty_score", 0.0),
+            is_discordant=fusion_out.get("is_discordant", False),
+            correlated_groups_summary=fusion_out.get("correlated_groups_summary", {}),
             decision_status=decision_status,
             raw_input=raw_input_data,
             model_versions=active_model_versions

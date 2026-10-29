@@ -113,6 +113,38 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
+
+    # Feature 4: Scam Timeline & Evidence Dossier Tables
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS investigation_dossiers (
+            dossier_id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            target_institution TEXT,
+            status TEXT DEFAULT 'ACTIVE',
+            tags TEXT DEFAULT '[]',
+            case_ids_json TEXT DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dossier_timeline_events (
+            event_id TEXT PRIMARY KEY,
+            dossier_id TEXT NOT NULL,
+            case_id TEXT,
+            event_timestamp TEXT NOT NULL,
+            timestamp_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            modality TEXT NOT NULL,
+            evidence_reference TEXT,
+            risk_level TEXT DEFAULT 'HIGH',
+            ordering_rationale TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (dossier_id) REFERENCES investigation_dossiers(dossier_id) ON DELETE CASCADE
+        )
+    """)
     conn.commit()
 
     # Automatic safe migration for existing databases

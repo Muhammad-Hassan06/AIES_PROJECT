@@ -14,6 +14,8 @@ import AwarenessAcademyPage from './pages/AwarenessAcademyPage';
 import BatchComparePage from './pages/BatchComparePage';
 import SafetyCenterPage from './pages/SafetyCenterPage';
 import DigitalPrivacyPage from './pages/DigitalPrivacyPage';
+import AttackDNAGraphPage from './pages/AttackDNAGraphPage';
+import DossierTimelinePage from './pages/DossierTimelinePage';
 import SettingsPage from './pages/SettingsPage';
 
 import { LanguageProvider } from './context/LanguageContext';
@@ -199,6 +201,18 @@ function AppContent() {
 
             {activeTab === 'cases' && (
               <CasesPage
+                onSelectCase={handleOpenCase}
+              />
+            )}
+
+            {activeTab === 'attack-dna' && (
+              <AttackDNAGraphPage
+                onSelectCase={handleOpenCase}
+              />
+            )}
+
+            {activeTab === 'dossiers' && (
+              <DossierTimelinePage
                 onSelectCase={handleOpenCase}
               />
             )}
