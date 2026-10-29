@@ -109,6 +109,21 @@ describe('Case History & Restore Fidelity', () => {
     const msgInput = screen.getByPlaceholderText(/Paste suspicious text/i);
     expect(msgInput.value).toBe('URGENT: Your account is blocked. Verify OTP at the link.');
   });
+
+  it('clears saved case view and resets input fields when Close is clicked', () => {
+    const handleClear = vi.fn();
+    render(
+      <LanguageProvider>
+        <ToastProvider>
+          <InvestigationStudioPage currentReport={MOCK_SAVED_CASE} onClearReport={handleClear} />
+        </ToastProvider>
+      </LanguageProvider>
+    );
+
+    const closeBtn = screen.getByRole('button', { name: /Close/i });
+    fireEvent.click(closeBtn);
+    expect(handleClear).toHaveBeenCalledTimes(1);
+  });
 });
 
 

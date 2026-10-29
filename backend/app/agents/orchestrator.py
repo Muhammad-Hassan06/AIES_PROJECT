@@ -130,6 +130,7 @@ class AgenticInvestigationOrchestrator:
                     detected_keywords=ocr_out.get("detected_keywords", []),
                     visual_indicators=ocr_out.get("visual_indicators", []),
                     ocr_engine=ocr_out.get("ocr_engine", "OCR_Engine"),
+                    ocr_warning=ocr_out.get("ocr_warning"),
                     latency_ms=ocr_out.get("latency_ms", 0.0),
                     layout_type=ocr_out.get("layout_type", "GENERIC_GRAPHIC"),
                     visual_phishing_probability=ocr_out.get("visual_phishing_probability", 0.0),

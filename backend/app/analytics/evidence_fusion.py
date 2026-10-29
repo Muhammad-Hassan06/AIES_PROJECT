@@ -224,7 +224,8 @@ class EvidenceFusionEngine:
                 "correlated_groups_summary": {},
                 "limitations": [
                     "Input provided lacks diagnostic indicators (under 15 chars, no valid links or recognizable entities).",
-                    "Forensic engine avoided forced classification to prevent false reassurance or false alarm."
+                    "Forensic engine avoided forced classification to prevent false reassurance or false alarm.",
+                    "If analyzing a screenshot on Render, verify an OCR engine (Tesseract) or Vision API key (GEMINI_API_KEY / GROQ_API_KEY) is configured in your server environment."
                 ]
             }
 

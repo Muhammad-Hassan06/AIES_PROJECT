@@ -7,6 +7,7 @@ from app.api.routes import router
 from app.db.database import init_db, list_recent_investigations, save_investigation
 from app.agents.orchestrator import orchestrator
 from app.models.schemas import InvestigationType
+from app.core.keep_alive import keep_alive_manager
 
 # Pre-defined sample investigations for immediate demonstration
 SEED_DEMO_CASES = [
@@ -55,8 +56,14 @@ async def lifespan(app: FastAPI):
                 save_investigation(rep.case_id, rep.model_dump())
             except Exception as e:
                 print(f"[CyberShield AI] Error seeding demo case: {e}")
+
+    # Launch Render free-tier keep-alive worker if deployed on Render or configured with KEEP_ALIVE_URL
+    keep_alive_manager.start()
+
     yield
-    # Shutdown logic if needed
+
+    # Shutdown: gracefully terminate background tasks
+    await keep_alive_manager.stop()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

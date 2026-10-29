@@ -1,0 +1,48 @@
+name: Render Free Tier Keep-Alive
+
+on:
+  schedule:
+    # Run every 14 minutes to prevent Render free tier's 15-minute idle spin-down
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+    inputs:
+      custom_url:
+        description: 'Optional custom URL to ping'
+        required: false
+        default: ''
+
+jobs:
+  keep-alive:
+    name: Ping Render Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Service
+        env:
+          DEFAULT_URL: ${{ secrets.RENDER_BACKEND_URL || vars.RENDER_BACKEND_URL }}
+          MANUAL_URL: ${{ github.event.inputs.custom_url }}
+        run: |
+          TARGET_URL="${MANUAL_URL:-$DEFAULT_URL}"
+          
+          if [ -z "$TARGET_URL" ]; then
+            echo "⚠️ [Warning] Neither RENDER_BACKEND_URL secret nor input was configured."
+            echo "Please set RENDER_BACKEND_URL in your repository Secrets or Variables (e.g., https://your-backend.onrender.com)."
+            exit 0
+          fi
+          
+          TARGET_URL="${TARGET_URL%/}"
+          echo "🔄 Pinging $TARGET_URL at $(date -u)"
+          
+          # Attempt /api/health first, fallback to root /
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 \
+            -H "User-Agent: GitHub-Actions-Render-KeepAlive/1.0" \
+            "$TARGET_URL/api/health" || echo "000")
+            
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Successfully pinged /api/health (HTTP $HTTP_STATUS) - Service is awake!"
+          else
+            echo "⚠️ /api/health returned $HTTP_STATUS. Attempting root endpoint $TARGET_URL/..."
+            HTTP_STATUS_ROOT=$(curl -s -o /dev/null -w "%{http_code}" -m 30 \
+              -H "User-Agent: GitHub-Actions-Render-KeepAlive/1.0" \
+              "$TARGET_URL/" || echo "000")
+            echo "Root endpoint returned HTTP $HTTP_STATUS_ROOT"
+          fi

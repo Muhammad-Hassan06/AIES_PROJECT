@@ -84,6 +84,8 @@ function AppContent() {
             setActiveTab('investigate');
           }
         });
+      } else if (window.location.pathname === '/' || window.location.pathname === '') {
+        setCurrentReport(null);
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -123,6 +125,7 @@ function AppContent() {
   };
 
   const handleNewInvestigation = () => {
+    setCurrentReport(null);
     setActiveTab('investigate');
     window.history.pushState(null, '', '/');
   };
@@ -190,6 +193,7 @@ function AppContent() {
             {activeTab === 'investigate' && (
               <InvestigationStudioPage
                 currentReport={currentReport}
+                onClearReport={() => setCurrentReport(null)}
                 onReportGenerated={(rep) => {
                   setCurrentReport(rep);
                   if (rep?.case_id) {

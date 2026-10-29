@@ -156,3 +156,16 @@ def test_dual_schema_compatibility_keys_present():
         assert "box" in r
         assert "detected_text" in r
         assert "evidence_explanation" in r
+
+def test_bisp_ehsaas_social_engineering_detection():
+    """Verifies that BISP / Ehsaas Roman Urdu lottery lures are caught by NLP and expert rules."""
+    from app.nlp.text_classifier import text_classifier
+    bisp_text = (
+        "BISP Ehsaas Program\n"
+        "Mubarak ho aap k 25,000 rupay account mein agaye hain\n"
+        "Foran CNIC verify karwayen 0301-8899221"
+    )
+    res = text_classifier.analyze(bisp_text)
+    assert res["is_social_engineering"] is True
+    assert res["risk_score"] >= 0.70
+    assert any("Impersonation" in c or "Roman Urdu" in c or "Credential" in c for c in res["categories_detected"])

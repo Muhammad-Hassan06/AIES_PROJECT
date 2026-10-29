@@ -72,6 +72,7 @@ class ScreenshotAnalysisResult(BaseModel):
     detected_keywords: List[str]
     visual_indicators: List[str]
     ocr_engine: str
+    ocr_warning: Optional[str] = None
     latency_ms: float
     layout_type: Optional[str] = "GENERIC_GRAPHIC"
     visual_phishing_probability: Optional[float] = 0.0

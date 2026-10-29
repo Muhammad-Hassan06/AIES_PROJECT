@@ -323,11 +323,16 @@ class RuleEngine:
         has_ocr_signals = has_ocr and (bool(ocr_keywords) or bool(ocr_urls) or ocr_detected_intl_brand or ocr_detected_pk_brand)
         if not has_url and text_len < 15 and not has_ocr_signals and not manual:
             if input_type == "screenshot":
+                ocr_engine_name = ocr_result.get("ocr_engine", "") if has_ocr else ""
+                ocr_warn = ocr_result.get("ocr_warning") if has_ocr else ""
                 matched_conds = [
                     "Screenshot image submitted but no readable text or URLs could be extracted",
                     "OCR engine was unable to extract legible forensic cues from artifact"
                 ]
-                explanation = "CyberShield AI was unable to read legible text or links from the provided screenshot. If running on cloud/Linux, verify Tesseract OCR or a Vision API is enabled, or paste the message text directly."
+                if "Offline" in ocr_engine_name or ocr_warn:
+                    explanation = f"OCR capability is offline on this server: {ocr_warn or 'Neither Tesseract nor a Vision API key is configured.'} To analyze screenshots on Render, add GEMINI_API_KEY or GROQ_API_KEY to your Render Environment settings, or paste text in the Message tab."
+                else:
+                    explanation = "CyberShield AI was unable to read legible text or links from the provided screenshot. If running on cloud/Linux (e.g. Render), verify Tesseract OCR or a Vision API is enabled, or paste the message text directly."
             else:
                 matched_conds = [
                     "Evidence length under minimum diagnostic threshold",

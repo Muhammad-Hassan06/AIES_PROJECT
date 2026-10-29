@@ -13,13 +13,13 @@ TFIDF_PATH = os.path.join(MODEL_DIR, "nlp_tfidf.joblib")
 SPAN_PATTERNS = [
     {
         "category": "Credential Harvesting",
-        "pattern": r"\b(otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|cnic number|card number|cvv|seed phrase|recovery seed|mpin|verify your account|confirm your identity|verify identity|enter your card|account locked|access your account|sign in to|click here to verify|update your information|confirm account|account alert|unusual sign.?in|unauthorized access|new device detected|suspicious login|verify now|re.?verify|update billing|enter pin|reset password|reset your password)\b",
-        "explanation": "Requesting one-time passwords, PINs, or credentials directly violates legitimate authentication protocols."
+        "pattern": r"\b(cnic(\s*(?:number|no\.?|card))?|otp|one[- ]time password|passcode|pin code|atm pin|password|login credentials|card number|cvv|seed phrase|recovery seed|mpin|verify your account|confirm your identity|verify identity|enter your card|account locked|access your account|sign in to|click here to verify|update your information|confirm account|account alert|unusual sign.?in|unauthorized access|new device detected|suspicious login|verify now|re.?verify|update billing|enter pin|reset password|reset your password)\b",
+        "explanation": "Requesting one-time passwords, PINs, CNIC, or credentials directly violates legitimate authentication protocols."
     },
     {
         "category": "Urgency & Pressure",
-        "pattern": r"\b(urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be (blocked|closed|terminated)|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in|your account has been|limited access|restricted|we noticed|security alert|verify within|action required|review required)\b",
-        "explanation": "Artificial deadlines and panic inducement coerce victims into acting before verifying authenticity."
+        "pattern": r"\b(foran|jaldi|abhe|abhi|urgent(ly)?|immediately|within \d+ (hours?|minutes?)|immediate action|account will be (blocked|closed|terminated)|deactivat(ed|ion)|final notice|suspended immediately|act now|expires in|your account has been|limited access|restricted|we noticed|security alert|verify within|action required|review required)\b",
+        "explanation": "Artificial deadlines, coercive haste, and panic inducement coerce victims into acting before verifying authenticity."
     },
     {
         "category": "Legal & Intimidation Threat",
@@ -33,7 +33,7 @@ SPAN_PATTERNS = [
     },
     {
         "category": "Prize & Lottery Lure",
-        "pattern": r"\b(won rs\.? ?\d+|prize of rs|cash prize|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey|scholarship|laptop scholarship|free iphone|100 gb free|cash grant|grant approved|beneficiary|financial assistance)\b",
+        "pattern": r"\b(won rs\.? ?\d+|prize of rs|cash prize|lottery winner|lucky draw|jeeto pakistan|congratulations you won|claim reward|unclaimed grant|\$\d+ freebies|freebies|free gift|gift card|survey mate|reward survey|scholarship|laptop scholarship|free iphone|100 gb free|cash grant|grant approved|beneficiary|financial assistance|\d+[\d,]*\s*(?:rupay|rupees|rs|pkr|account mein|account me))\b",
         "explanation": "Unsolicited cash rewards, survey freebies, or lottery wins entice victims into fraudulent fee payment or credential sharing."
     },
     {
@@ -53,7 +53,7 @@ SPAN_PATTERNS = [
     },
     {
         "category": "Roman Urdu Fraud Cue",
-        "pattern": r"\b(inaam|mubarak ho|paise jeet|parchi|account band|bisp raqam|code bhejein|jaldi karein|easypaisa pin|jazzcash account|wazeefa manzoor|foran rabta|tolay sona)\b",
+        "pattern": r"\b(inaam|mubarak ho|mubarak|paise jeet|parchi|account band|bisp raqam|bisp|ehsaas|raqam|rupay|rupees|account mein|account me|agaye hain|agye hain|foran|verify karwayen|verify karwaen|verify karain|code bhejein|jaldi karein|jaldi krain|easypaisa pin|jazzcash account|wazeefa manzoor|wazeefa|wazifa|foran rabta|tolay sona)\b",
         "explanation": "Common Roman Urdu phrasing frequently observed in localized SMS and WhatsApp cyber scams in Pakistan."
     }
 ]
@@ -117,11 +117,16 @@ class SocialEngineeringNLPClassifier:
 
             # Corroborate raw ML score with extracted semantic signals
             if len(spans) == 0:
-                # Text contains zero fraud cues, urgency, credential harvesting, or threats.
-                # Suppress out-of-vocabulary Naive Bayes prior drift on innocent messages.
-                risk_score = min(raw_prob * 0.25, 0.20)
-                is_malicious = False
-                model_name = "TF-IDF + MultinomialNB (Corroborated Legitimate)"
+                # Text contains zero detected regex categories.
+                if raw_prob >= 0.75:
+                    risk_score = round(raw_prob * 0.85, 3)
+                    is_malicious = True
+                    model_name = "TF-IDF + MultinomialNB (Strong Statistical Match)"
+                else:
+                    # Suppress out-of-vocabulary Naive Bayes prior drift on innocent messages.
+                    risk_score = min(raw_prob * 0.25, 0.20)
+                    is_malicious = False
+                    model_name = "TF-IDF + MultinomialNB (Corroborated Legitimate)"
             else:
                 # Semantic fraud indicators are corroborated by span analysis
                 risk_score = raw_prob

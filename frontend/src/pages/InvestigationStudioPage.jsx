@@ -57,8 +57,17 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
       else if (currentReport.input_type === 'screenshot') setActiveTab('screenshot');
       else if (targetUrl) setActiveTab('url');
       else if (targetText) setActiveTab('message');
+    } else {
+      // Clean slate for registering a brand-new case
+      setUrl('');
+      setText('');
+      setSenderInfo('');
+      setScreenshotBase64('');
+      setScreenshotName('');
+      setManualIndicators([]);
+      setErrorMessage('');
     }
-  }, [currentReport?.case_id]);
+  }, [currentReport?.case_id, currentReport === null]);
 
   const handleCloseSavedCase = () => {
     setUrl('');
@@ -589,16 +598,36 @@ export default function InvestigationStudioPage({ currentReport, onReportGenerat
             )}
 
             {/* 4. Screenshot Vision & OCR Forensics */}
-            {(currentReport.vision_result?.extracted_text || currentReport.vision_result?.suspicious_regions) && (
+            {Boolean(currentReport.vision_result || currentReport.input_type === 'screenshot') && (
               <CollapsibleSection
                 id="screenshot-analysis"
                 title={t('sec_screenshot') || 'Visual Phishing Forensics & OCR'}
                 icon={ImageIcon}
-                badge={currentReport.vision_result.layout_type || currentReport.vision_result.ocr_engine}
+                badge={currentReport.vision_result?.layout_type || currentReport.vision_result?.ocr_engine || 'Screenshot Analysis'}
                 badgeType="neutral"
                 defaultOpen={true}
               >
                 <div className="pt-2">
+                  {/* OCR Offline / Cloud Setup Advisory Banner */}
+                  {(currentReport.vision_result?.ocr_warning || currentReport.vision_result?.ocr_engine?.includes('Offline') || currentReport.vision_result?.ocr_engine?.includes('Unavailable')) && (
+                    <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start space-x-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-bold text-amber-950">OCR Engine Offline on Host Server</p>
+                        <p className="text-amber-800 leading-relaxed">
+                          {currentReport.vision_result?.ocr_warning || 'The backend server does not have local Tesseract or a cloud Vision API key active. Text from this screenshot could not be extracted.'}
+                        </p>
+                        <div className="mt-2 text-slate-700 bg-white/70 p-2.5 rounded-lg border border-amber-200">
+                          <p className="font-semibold text-slate-800 mb-1">How to enable screenshot detection on Render:</p>
+                          <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600">
+                            <li><strong>Option 1 (Fastest):</strong> In your <strong>Render Dashboard → Web Service → Environment</strong>, add <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-amber-900">GEMINI_API_KEY</code> or <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-amber-900">GROQ_API_KEY</code>.</li>
+                            <li><strong>Option 2 (Full Docker):</strong> Deploy using the included <code className="bg-amber-100 px-1 py-0.5 rounded font-mono">Dockerfile</code> which automatically installs Tesseract OCR.</li>
+                            <li><strong>Manual alternative:</strong> Paste the text directly into the <strong>Message</strong> tab above.</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <VisualForensicsCanvas
                     visionResult={currentReport.vision_result}
                     imageSource={screenshotBase64}
